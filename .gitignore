@@ -2,7 +2,6 @@
 .gradle/
 .idea/
 .svn/
-Inspector.iml
 api/api.iml
 api/build/
 api/target/
