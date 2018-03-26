@@ -1,0 +1,13 @@
+LOCAL_PATH		:= $(call my-dir)
+
+ifeq ($(TARGET_ARCH),arm)
+	include $(CLEAR_VARS)
+	LOCAL_MODULE    := injector
+	INJECTOR_SOURCES	:= elf.c inject.c ptrace.c
+	LOCAL_SRC_FILES := $(INJECTOR_SOURCES)
+	LOCAL_CFLAGS := -DANDROID -DTHUMB
+	LOCAL_LDFLAGS += -pie -fPIE
+	NDK_APP_DST_DIR := assets/$(TARGET_ARCH_ABI)
+	include $(BUILD_EXECUTABLE)
+	NDK_APP_DST_DIR := $(NDK_APP_LIBS_OUT)/$(TARGET_ARCH_ABI)
+endif

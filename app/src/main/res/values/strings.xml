@@ -1,0 +1,96 @@
+<resources>
+
+    <string name="app_name">Inspector</string>
+    
+    <string name="title_activity_settings">Inspector配置</string>
+    <string name="pref_general">常规配置，*表示重启生效，其它重启应用生效</string>
+    <string name="pref_trace_anti_sum">是否启用Anti-Trace本地hook</string>
+    <string name="pref_trace_anti_title">Anti-Trace</string>
+    <string name="pref_anti_thread_create_sum">是否阻止创建线程</string>
+    <string name="pref_anti_thread_create_title">Anti-Thread-Create</string>
+    <string name="pref_trace_file_sum">是否跟踪文件相关</string>
+    <string name="pref_trace_file_title">Trace-File</string>
+    <string name="pref_trace_sys_call_sum">是否系统调用相关</string>
+    <string name="pref_trace_sys_call_title">Trace-Sys-Call</string>
+    <string name="pref_trace_trace_sum">是否跟踪调试相关</string>
+    <string name="pref_trace_trace_title">Trace-Trace</string>
+
+    <string name="pref_patch_ssl_sum">是否处理SSL</string>
+    <string name="pref_patch_ssl_dialogTitle">SSL组合</string>
+    <string name="pref_patch_ssl_title">Patch-SSL</string>
+    <string-array name="pref_patch_ssl_entries">
+        <item>SSL_1</item>
+        <item>SSL_2</item>
+        <item>SSL_3</item>
+    </string-array>
+    <string-array name="pref_patch_ssl_values">
+        <item>1</item>
+        <item>2</item>
+        <item>4</item>
+    </string-array>
+
+    <string name="pref_ssl_trust_killer_sum">是否禁用SSL身份验证</string>
+    <string name="pref_ssl_trust_killer_title">Enable-SSLTrustKiller</string>
+
+    <string name="pref_broadcast_sum">是否广播监听端口</string>
+    <string name="pref_broadcast_title">Enable-Broadcast</string>
+
+    <string name="pref_debuggable_all_sum">是否允许全调试模式</string>
+    <string name="pref_debuggable_all_title">Debuggable-All(*)</string>
+    
+    <string name="pref_enable_status_sum">是否启用该模块</string>
+    <string name="pref_enable_status_title">Enabled</string>
+    
+    <string name="pref_collect_bytecode_sum">启用收集字节码</string>
+    <string name="pref_collect_bytecode_dialogTitle">类名过滤(为空表示不收集)</string>
+    <string name="pref_collect_bytecode_title">Collect-Bytecode</string>
+    
+    <string name="pref_local_root_sum">是否允许本地ROOT功能</string>
+    <string name="pref_local_root_title">Local-ROOT(*)</string>
+    
+    <string name="pref_debug_sum">是否打开Debug开关</string>
+    <string name="pref_debug_title">Debug</string>
+    
+    <string name="title_activity_launcher">Inspector</string>
+    <string name="pref_launcher">注入管理</string>
+    
+    <string name="pref_launcher_app_sum">选择待注入的程序</string>
+    <string name="pref_launcher_app_title">选择程序</string>
+
+    <string name="connecting">Connecting</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="connected">Connected</string>
+
+    <string name="pref_vpn_host_sum">Vpn服务器主机</string>
+    <string name="pref_vpn_host_dialogTitle">输入Vpn服务器域名或者IP</string>
+    <string name="pref_vpn_host_title">Vpn Host</string>
+
+    <string name="pref_vpn_port_sum">Vpn服务器端口</string>
+    <string name="pref_vpn_port_dialogTitle">输入Vpn服务器端口</string>
+    <string name="pref_vpn_port_title">Vpn Port</string>
+
+    <string name="pref_vpn_password_sum">Vpn服务器密码</string>
+    <string name="pref_vpn_password_dialogTitle">输入Vpn服务器密码</string>
+    <string name="pref_vpn_password_title">Vpn Password</string>
+
+    <string name="pref_socks_host_sum">Socks服务器主机</string>
+    <string name="pref_socks_host_dialogTitle">输入Socks服务器域名或者IP</string>
+    <string name="pref_socks_host_title">Socks Host</string>
+
+    <string name="pref_socks_port_sum">Socks服务器端口</string>
+    <string name="pref_socks_port_dialogTitle">输入Socks服务器端口</string>
+    <string name="pref_socks_port_title">Socks Port</string>
+
+    <string name="pref_socks_sum">启用Socks代理</string>
+    <string name="pref_socks_title">Enabled Socks</string>
+
+    <string name="pref_system_app_title">System-App</string>
+    <string name="pref_system_app_sum">是否Hook系统应用</string>
+
+    <string name="pref_stetho_sum">是否启用Stetho</string>
+    <string name="pref_stetho_title">Enable-Stetho</string>
+
+    <string name="pref_vpn_debug_sum">是否打开VpnDebug开关</string>
+    <string name="pref_vpn_debug_title">VpnDebug</string>
+
+</resources>
