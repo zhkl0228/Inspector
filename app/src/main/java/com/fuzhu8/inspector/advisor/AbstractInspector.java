@@ -66,6 +66,7 @@ import com.fuzhu8.inspector.dex.ClassMethod;
 import com.fuzhu8.inspector.dex.DexFile;
 import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.dex.SmaliFile;
+import com.fuzhu8.inspector.dex.jf.Smali;
 import com.fuzhu8.inspector.dex.provider.DexFileProvider;
 import com.fuzhu8.inspector.dex.provider.StaticDexFileElement;
 import com.fuzhu8.inspector.http.HttpUtils;
@@ -150,7 +151,6 @@ import cn.banny.utils.StringUtils;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;
-import com.fuzhu8.inspector.dex.jf.Smali;
 import unicorn.BlockHook;
 import unicorn.CodeHook;
 import unicorn.Unicorn;
@@ -308,7 +308,8 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			if (socksServer != null) {
 				packageInfo = context.getPackageManager().getPackageInfo(socksServer, PackageManager.GET_META_DATA);
 			}
-		} catch(NameNotFoundException ignored) {}
+		} catch (NameNotFoundException ignored) {
+		}
 
 		String reason = "";
 		int index = socksServer == null || packageInfo != null ? -1 : socksServer.indexOf(':');
@@ -607,7 +608,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				}
 
 				Socket socket = serverSocket.accept();
-				assert  socket != null;
+				assert socket != null;
 
 				socket.setKeepAlive(true);
 				socket.setKeepAlive(true);
@@ -622,7 +623,8 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				while ((cache = cacheQueue.poll()) != null) {
 					try {
 						cache.writeTo(console);
-					} catch (IOException ignored) {}
+					} catch (IOException ignored) {
+					}
 				}
 
 				Command command;
@@ -633,7 +635,8 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 					command.execute(lua, this, this.context);
 				}
 
-			} catch (SocketTimeoutException ignored) {} catch(SocketException e) {
+			} catch (SocketTimeoutException ignored) {
+			} catch (SocketException e) {
 				IOUtils.closeQuietly(serverSocket);
 				serverSocket = null;
 				closeQuietly(localServerSocket);
@@ -658,7 +661,12 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 	}
 
 	private void closeQuietly(LocalServerSocket localServerSocket) {
-		try { if(localServerSocket != null) { localServerSocket.close(); } } catch(Exception ignored) {}
+		try {
+			if (localServerSocket != null) {
+				localServerSocket.close();
+			}
+		} catch (Exception ignored) {
+		}
 	}
 
 	@Override
@@ -717,10 +725,10 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			if (traceFilePath != null) {
 				inputStream = new FileInputStream(traceFilePath);
 				writeToConsole(new OpenTraceFile(keywords == null ? "" : keywords, traceFilePath.getName(), inputStream, (int) traceFilePath.length()));
-			} else if(keywords != null) {
+			} else if (keywords != null) {
 				println("method tracing stop successfully! ");
 			}
-		} catch(IOException e) {
+		} catch (IOException e) {
 			println(e);
 		} finally {
 			IOUtils.closeQuietly(inputStream);
@@ -1555,7 +1563,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		try {
 			int cameras = Camera.getNumberOfCameras();
 			List<JSONObject> cameraInfos = new ArrayList<JSONObject>(cameras);
-			for(int i = 0; i < cameras; i++) {
+			for (int i = 0; i < cameras; i++) {
 				Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
 				Camera.getCameraInfo(i, cameraInfo);
 				JSONObject obj = new JSONObject();
@@ -1575,7 +1583,8 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				cameraInfos.add(obj);
 			}
 			println("cameraInfos: " + cameraInfos);
-		} catch(Throwable ignored) {}
+		} catch (Throwable ignored) {
+		}
 
 		/*try {
 			String glRenderer = GLES10.glGetString(GL10.GL_RENDERER);
@@ -1588,6 +1597,24 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				println("glVendor: " + glVendor);
 			}
 		} catch(Throwable ignored) {}*/
+
+		if (context != null) {
+			dumpSystemInfo(context);
+		}
+	}
+
+	@SuppressLint({"MissingPermission", "HardwareIds"})
+	private void dumpSystemInfo(Context context) {
+		TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+		if (tm == null) {
+			throw new IllegalStateException("Must have android.permission.READ_PHONE_STATE permission. ");
+		}
+
+		String imei = tm.getDeviceId();
+		String imsi = tm.getSubscriberId();
+
+		org.json.JSONObject systemInfo = SystemInfo.create(context, tm, imei, imsi);
+		err_println("\nsystem info json: \n" + systemInfo);
 	}
 
 	private void printStorageSize(String label, File directory) {
