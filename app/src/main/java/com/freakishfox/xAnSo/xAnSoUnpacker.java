@@ -36,7 +36,7 @@ public class xAnSoUnpacker extends Native implements Unpacker {
 
     @Override
     public ByteBuffer dumpByLinker(String so_path) throws IOException {
-        checkSupported();
+        checkSupported("dumpByLinker so_path=" + so_path);
 
         if(!new File(so_path).canRead()) {
             throw new IOException("Load failed: " + so_path);

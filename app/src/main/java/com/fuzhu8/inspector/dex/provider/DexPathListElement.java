@@ -3,8 +3,8 @@ package com.fuzhu8.inspector.dex.provider;
 import com.fuzhu8.inspector.Inspector;
 import com.fuzhu8.inspector.dex.BytecodeMethod;
 import com.fuzhu8.inspector.dex.ClassMethod;
-import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.dex.DexFileData;
+import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.dex.SmaliFile;
 import com.fuzhu8.inspector.dex.vm.DexFile;
 import com.fuzhu8.inspector.dex.vm.DexFileFactory;
@@ -18,9 +18,12 @@ import com.fuzhu8.inspector.raw.dex.ProtoId;
 import com.fuzhu8.inspector.raw.dex.TypeList;
 import com.fuzhu8.inspector.raw.dex.smali.DexFileHeadersPointer;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,7 +39,7 @@ public class DexPathListElement extends AbstractDexFileProvider implements
 	
 	private final long cookie;
 	private final DexFile dexFile;
-	private final ByteBuffer buffer;
+	private final File outFile;
 	
 	private final DexHunter dexHunter = DexHunter.getInstance();
 
@@ -50,24 +53,24 @@ public class DexPathListElement extends AbstractDexFileProvider implements
 	/**
 	 * openDexFileNative
 	 */
-	public DexPathListElement(long cookie, String fileName, ByteBuffer buffer, String dataDir) {
-		this(null, cookie, fileName, buffer);
+	public DexPathListElement(long cookie, String fileName, File outFile, String dataDir) {
+		this(null, cookie, fileName, outFile);
 		
 		dexHunter.saveDexFileByCookie(cookie, dataDir);
 	}
 
-	private DexPathListElement(ClassLoader classLoader, long cookie, String fileName, ByteBuffer buffer) {
+	private DexPathListElement(ClassLoader classLoader, long cookie, String fileName, File outFile) {
 		super(classLoader, fileName);
 		
 		this.cookie = cookie;
 		this.dexFile = DexFileFactory.createDexFileByCookie(cookie);
 		this.dexFileHeadersPointer = dexFile.readDexFileHeadersPointer();
-		this.buffer = buffer == null ? null : buffer.asReadOnlyBuffer();
+		this.outFile = outFile;
 	}
 
 	@Override
 	protected char getPrefix() {
-		return buffer == null ? '&' : '*';
+		return outFile == null ? '&' : '*';
 	}
 	
 	private final DexFileHeadersPointer dexFileHeadersPointer;
@@ -137,11 +140,15 @@ public class DexPathListElement extends AbstractDexFileProvider implements
 			return buffer;
 		}
 
-		if(this.buffer == null) {
+		if(this.outFile == null) {
 			return dexFile.getDex();
 		}
-		
-		return this.buffer.duplicate();
+
+		try {
+			return ByteBuffer.wrap(FileUtils.readFileToByteArray(outFile));
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@Override
@@ -166,8 +173,7 @@ public class DexPathListElement extends AbstractDexFileProvider implements
 	}
 
 	private ByteBuffer collectAll(Inspector inspector, DexFileManager dexFileManager, ByteBuffer buffer, Map<String, BytecodeMethod> mainInstructionMap) {
-		Map<String, BytecodeMethod> instructionMap = new HashMap<>();
-		instructionMap.putAll(mainInstructionMap);
+		Map<String, BytecodeMethod> instructionMap = new HashMap<>(mainInstructionMap);
 		try {
 			for(String className : this.getClasses()) {
 				Class<?> clazz = this.loadClass(className);

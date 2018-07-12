@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.thomasking.sodumphelper;
 
 import java.io.File;
@@ -35,27 +32,22 @@ public class MainActivity extends Native implements Unpacker {
 
 	/**
 	 * 脱壳
-	 * @param so_path
-	 * @return
 	 */
     private static native int doDumpByLinker(String so_path);
     
     /**
      * so脱壳
-     * @param so_path
-     * @return
-     * @throws IOException
      */
     @Override
     public synchronized ByteBuffer dumpByLinker(String so_path) throws IOException {
-    	checkSupported();
+		checkSupported("dumpByLinker so_path=" + so_path);
     	
     	if(!new File(so_path).canRead()) {
     		throw new IOException("Load failed: " + so_path);
     	}
 
 		File dump = new File(Environment.getExternalStorageDirectory(), "dump.so");
-		dump.delete();
+		FileUtils.deleteQuietly(dump);
     	switch (doDumpByLinker(so_path)) {
     	case 0:
     		break;

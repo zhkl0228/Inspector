@@ -109,7 +109,7 @@ public interface DexFileManager {
 	/**
 	 * 发现ClassLoader
 	 */
-	void discoverClassLoader();
+	void discoverClassLoader(ClassLoader classLoader);
 	
 	ClassLoader getCallingClassLoader() throws ClassNotFoundException;
 

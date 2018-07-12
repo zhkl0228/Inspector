@@ -20,12 +20,14 @@ public abstract class Native {
 	
 	protected abstract boolean hasSupported();
 	
-	protected final void checkSupported() {
+	protected final void checkSupported(String msg) {
 		if(hasSupported()) {
 			return;
 		}
-		
-		throw new UnsupportedOperationException();
+
+		if (msg != null) {
+			throw new UnsupportedOperationException(msg);
+		}
 	}
 
 }

@@ -31,7 +31,7 @@ public class DvmUtil extends Native {
 	}
 	
 	public ClassObject getDexClassObject(Class<?> clazz) {
-		checkSupported();
+		checkSupported("getDexClassObject class=" + clazz);
 		
 		int classId = findClassId(clazz);
 		// Log.d("DvmUtil", "getDexClassObject classId=" + classId);
@@ -51,7 +51,7 @@ public class DvmUtil extends Native {
 	 * 根据方法找到内存地址
 	 */
 	public int findMethodId(Member method) {
-		checkSupported();
+		checkSupported("findMethodId method=" + method);
 		
 		if (!(method instanceof Method) && !(method instanceof Constructor<?>)) {
 			throw new IllegalArgumentException("Only methods and constructors can be hooked: " + method);
@@ -66,7 +66,7 @@ public class DvmUtil extends Native {
 	}
 	
 	public DvmGlobals getDvmGlobals() {
-		checkSupported();
+		checkSupported("getDvmGlobals");
 		
 		return new DvmGlobals(new Pointer(getDvmGlobalsPointer()));
 	}

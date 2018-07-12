@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Application;
-import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -28,9 +27,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
-import android.os.IBinder;
 import android.os.Process;
-import android.os.ServiceManager;
 import android.os.StatFs;
 import android.provider.Settings;
 import android.telephony.CellLocation;
@@ -45,7 +42,6 @@ import com.alibaba.dcm.DnsCacheEntry;
 import com.alibaba.dcm.DnsCacheManipulator;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.android.internal.telephony.ISms;
 import com.facebook.stetho.Stetho;
 import com.facebook.stetho.dumpapp.DumperPlugin;
 import com.facebook.stetho.inspector.protocol.ChromeDevtoolsDomain;
@@ -98,6 +94,7 @@ import com.fuzhu8.inspector.unicorn.EmulatorFactory;
 import com.fuzhu8.inspector.vpn.InspectVpnService;
 import com.fuzhu8.inspector.vpn.InspectorPacketCapture;
 import com.jaredrummler.android.processes.AndroidProcesses;
+import com.lahm.library.EasyProtectorLib;
 import com.nagapt.udog.UDogUnpacker;
 import com.thomasking.sodumphelper.MainActivity;
 
@@ -1509,6 +1506,9 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		println("externalStorageDirectory: " + Environment.getExternalStorageDirectory());
 		println("rootDirectory: " + Environment.getRootDirectory());
 
+		if (context != null) {
+			println("processName: " + getProcessNameByPid(context, Process.myPid()));
+		}
 		println("pid: " + Process.myPid());
 		println("uid: " + Process.myUid());
 		println("tid: " + Process.myTid());
@@ -1586,21 +1586,14 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		} catch (Throwable ignored) {
 		}
 
-		/*try {
-			String glRenderer = GLES10.glGetString(GL10.GL_RENDERER);
-			String glVendor = GLES10.glGetString(GL10.GL_VENDOR);
-
-			if (glRenderer != null) {
-				println("glRenderer: " + glRenderer);
-			}
-			if (glVendor != null) {
-				println("glVendor: " + glVendor);
-			}
-		} catch(Throwable ignored) {}*/
-
 		if (context != null) {
 			dumpSystemInfo(context);
 		}
+
+		println("isRoot: " + EasyProtectorLib.checkIsRoot());
+		println("runningInEmulator: " + EasyProtectorLib.checkIsRunningInEmulator());
+		println("usingMultiVirtualApp: " + EasyProtectorLib.checkIsUsingMultiVirtualApp());
+		println("xposedExist: " + EasyProtectorLib.checkIsXposedExist());
 	}
 
 	@SuppressLint({"MissingPermission", "HardwareIds"})
@@ -1648,7 +1641,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 						if (val instanceof byte[]) {
 							inspect((byte[]) val, '[' + hash + ']' + field);
 						} else {
-							println('[' + hash + ']' + field + "=" + val);
+							println('[' + hash + ']' + field + "=" + val + (val == null ? "" : (" [" + val.getClass() + "]")));
 						}
 						continue;
 					}
@@ -1781,7 +1774,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		err_println(Log.getStackTraceString((Throwable) msg));
 	}
 
-	void sendDataMessage(Object thisObj, String destinationAddress, String scAddress, short destinationPort, byte[] data,
+	/*void sendDataMessage(Object thisObj, String destinationAddress, String scAddress, short destinationPort, byte[] data,
 						 PendingIntent sentIntent, PendingIntent deliveryIntent) {
 		for (Plugin plugin : context.getPlugins()) {
 			plugin.notifySendDataMessage(destinationAddress, scAddress, destinationPort, data, sentIntent, deliveryIntent);
@@ -1795,7 +1788,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			buffer.append(part);
 		}
 		sendTextInternal(destinationAddress, scAddress, buffer.toString(), null, null, "sendMultipartTextMessage");
-	}
+	}*/
 
 	@Override
 	protected void executeHook() {
@@ -1804,7 +1797,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 	private void executeMyHook() {
 		// if(System.out != null) return;
 
-		try {
+		/*try {
 			hook(SmsManager.class, "sendTextMessage", String.class, String.class, String.class, PendingIntent.class, PendingIntent.class);
 		} catch (NoSuchMethodException e) {
 			log(e);
@@ -1833,7 +1826,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			hookMessageService(binder);
 		} catch (Throwable t) {
 			log(t);
-		}
+		}*/
 
 		try {
 			// hook(Activity.class, "onCreate", Bundle.class);
@@ -1884,6 +1877,20 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 					super.afterHookedMethod(param);
 
 					initializePlugins((Application) param.thisObject);
+				}
+			});
+		} catch (NoSuchMethodException e) {
+			log(e);
+		}
+
+		try {
+			Method method = Application.class.getDeclaredMethod("attach", Context.class);
+			context.getHooker().hookMethod(method, new MethodHookAdapter() {
+				@Override
+				public void afterHookedMethod(MethodHookParam param) throws Throwable {
+					super.afterHookedMethod(param);
+
+					onAttachApplication((Application) param.thisObject);
 				}
 			});
 		} catch (NoSuchMethodException e) {
@@ -2016,14 +2023,14 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		println(buffer.toString());
 	}
 
-	private boolean hookMessageService(IBinder binder) throws NoSuchMethodException {
+	/*private boolean hookMessageService(IBinder binder) throws NoSuchMethodException {
 		if (binder == null) {
 			return false;
 		}
 		ISms sms = ISms.Stub.asInterface(binder);
 		context.getSdk().hook_sendTextMessage(context.getHooker(), this, sms.getClass());
 		return true;
-	}
+	}*/
 
 	private Context appContext;
 
@@ -2056,6 +2063,30 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 		for (Plugin plugin : this.context.getPlugins()) {
 			plugin.initialize(appContext);
+		}
+	}
+
+	private synchronized void onAttachApplication(Application application) {
+		application.registerReceiver(new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				if (console == null) {
+					return;
+				}
+				Bundle bundle = intent.getExtras();
+				if (bundle == null) {
+					return;
+				}
+				byte[] packet = bundle.getByteArray(KrakenCapture.PACKET_KEY);
+				int datalink = bundle.getInt(KrakenCapture.DLT_KEY);
+				onKrakenCapture(packet, datalink);
+			}
+		}, new IntentFilter(KrakenCapture.KRAKEN_CAPTURE_ON_PACKET));
+		this.appContext = application;
+		log("set context: " + application);
+
+		for (Plugin plugin : this.context.getPlugins()) {
+			plugin.onAttachApplication(application);
 		}
 	}
 
@@ -2130,7 +2161,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 	/**
 	 * void sendTextMessage(String destinationAddress, String scAddress, String text, PendingIntent sentIntent, PendingIntent deliveryIntent);
 	 */
-	void sendTextMessage(Object thisObj, String destinationAddress, String scAddress, String text,
+	/*void sendTextMessage(Object thisObj, String destinationAddress, String scAddress, String text,
 						 PendingIntent sentIntent, PendingIntent deliveryIntent) {
 		sendTextInternal(destinationAddress, scAddress, text, sentIntent, deliveryIntent, "sendTextMessage");
 	}
@@ -2156,7 +2187,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		for (Plugin plugin : context.getPlugins()) {
 			plugin.notifySendTextMessage(destinationAddress, scAddress, text, sentIntent, deliveryIntent, label);
 		}
-	}
+	}*/
 
 	private static final int WPE = 16;
 

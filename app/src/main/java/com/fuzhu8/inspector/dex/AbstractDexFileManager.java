@@ -22,6 +22,7 @@ import com.fuzhu8.inspector.dex.vm.dvm.DvmDex;
 import com.fuzhu8.inspector.jni.DexHunter;
 import com.fuzhu8.inspector.jni.DvmUtil;
 import com.fuzhu8.inspector.jni.TraceAnti;
+import com.fuzhu8.inspector.plugin.Plugin;
 import com.sun.jna.Pointer;
 import com.taobao.android.dexposed.XposedHelpers;
 
@@ -79,18 +80,21 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	private final Set<ClassLoader> discoveredClassLoaders = new LinkedHashSet<>();
 
 	@Override
-	public final void discoverClassLoader() {
+	public final void discoverClassLoader(ClassLoader classLoader) {
 		try {
+			if (classLoader != null) {
+				discoveredClassLoaders.add(classLoader);
+			}
 			Class<?> VMStack = Class.forName("dalvik.system.VMStack");
 			Class<?>[] classes = (Class<?>[]) XposedHelpers.callStaticMethod(VMStack, "getClasses", -1);
 			for(Class<?> clazz : classes) {
-				ClassLoader classLoader = clazz.getClassLoader();
-				if(discoveredClassLoaders.add(classLoader)) {
-					inspector.println("discoverClassLoader: " + classLoader);
-					notifyClassLoader(classLoader);
+				ClassLoader cl = clazz.getClassLoader();
+				if(discoveredClassLoaders.add(cl)) {
+					inspector.println("discoverClassLoader: " + cl);
+					notifyClassLoader(cl);
 				}
 			}
-		} catch(ClassNotFoundException e) {
+		} catch(Throwable e) {
 			inspector.println(e);
 		}
 	}
@@ -532,9 +536,15 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 				if(file.isDirectory()) {
 					continue;
 				}
-				byte[] data = FileUtils.readFileToByteArray(file);
+
+				File dataDir = context.getDataDir();
+				if (dataDir == null) {
+					dataDir = new File("/data/local/tmp");
+				}
+				File outFile = new File(dataDir.getAbsolutePath() + file.getAbsolutePath());
+				FileUtils.copyFile(file, outFile);
 				
-				DexFileProvider dex = new StaticDexFileElement(classLoader, p, ByteBuffer.wrap(data));
+				DexFileProvider dex = new StaticDexFileElement(classLoader, p, outFile);
 				synchronized (staticLoadedDex) {
 					staticLoadedDex.add(dex);
 				}
@@ -584,9 +594,14 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 					continue;
 				}
 				
-				byte[] data = FileUtils.readFileToByteArray(file);
-				
-				DexFileProvider dex = new StaticDexFileElement(classLoader, path, ByteBuffer.wrap(data));
+				File dataDir = context.getDataDir();
+				if (dataDir == null) {
+					dataDir = new File("/data/local/tmp");
+				}
+				File outFile = new File(dataDir.getAbsolutePath() + file.getAbsolutePath());
+				FileUtils.copyFile(file, outFile);
+
+				DexFileProvider dex = new StaticDexFileElement(classLoader, path, outFile);
 				synchronized (staticLoadedDex) {
 					staticLoadedDex.add(dex);
 				}
@@ -615,12 +630,22 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 
 	@Override
 	public void addAnonymousDex(byte[] data, String name) {
-		byte[] copy = new byte[data.length];
-		System.arraycopy(data, 0, copy, 0, copy.length);
-		String md5 = name + '_' + DigestUtils.md5Hex(data).toUpperCase(Locale.CHINA);
-		DexFileProvider dex = new StaticDexFileElement(null, md5, ByteBuffer.wrap(data));
-		synchronized (staticLoadedDex) {
-			staticLoadedDex.add(dex);
+		try {
+			byte[] copy = new byte[data.length];
+			System.arraycopy(data, 0, copy, 0, copy.length);
+			String md5 = name + '_' + DigestUtils.md5Hex(data).toUpperCase(Locale.CHINA);
+			File dataDir = context.getDataDir();
+			if (dataDir == null) {
+				dataDir = new File("/data/local/tmp");
+			}
+			File outFile = new File(dataDir, md5 + ".dex");
+			FileUtils.writeByteArrayToFile(outFile, data);
+			DexFileProvider dex = new StaticDexFileElement(null, md5, outFile);
+			synchronized (staticLoadedDex) {
+				staticLoadedDex.add(dex);
+			}
+		} catch (IOException e) {
+			log(e);
 		}
 	}
 
@@ -636,8 +661,13 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 			if (MyModuleContext.isDebug()) {
 				log("openDexFileNative sourceName=" + sourceName + ", outputName=" + outputName + ", cookie=0x" + Long.toHexString(cookie).toUpperCase(Locale.CHINA));
 			}
-			byte[] data = FileUtils.readFileToByteArray(new File(sourceName));
-			DexFileProvider dex = new StaticDexFileElement(null, sourceName, ByteBuffer.wrap(data));
+			File dataDir = context.getDataDir();
+			if (dataDir == null) {
+				dataDir = new File("/data/local/tmp");
+			}
+			File outFile = new File(dataDir.getAbsolutePath() + sourceName);
+			FileUtils.copyFile(new File(sourceName), outFile);
+			DexFileProvider dex = new StaticDexFileElement(null, sourceName, outFile);
 			synchronized (staticLoadedDex) {
 				staticLoadedDex.add(dex);
 			}
@@ -652,9 +682,14 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 			 * 会因为当前dex被释放后，cookie指向错误的内存指针，从而导致崩溃
 			 */
 			if(cookie > 0 && outputName != null) {
-				ByteBuffer buffer = ByteBuffer.wrap(FileUtils.readFileToByteArray(new File(outputName)));
+				File inFile = new File(outputName);
 				File dataDir = context.getDataDir();
-				DexFileProvider dexFile = new DexPathListElement(cookie, outputName, buffer, dataDir == null ? "/data/local/tmp" : dataDir.getAbsolutePath());
+				if (dataDir == null) {
+					dataDir = new File("/data/local/tmp");
+				}
+				File outFile = new File(dataDir.getAbsolutePath() + outputName);
+				FileUtils.copyFile(inFile, outFile);
+				DexFileProvider dexFile = new DexPathListElement(cookie, outputName, outFile, dataDir.getAbsolutePath());
 				// DexOrJar dexOrJar = new DexOrJar(new Pointer(cookie));
 				// DvmDex dex = dexOrJar.isDex() ? dexOrJar.getRawDexFile().getDvmDex() : dexOrJar.getJarFile().getDvmDex();
 				// info.setDexHunter(new DexHunter(dex, inspector));
@@ -665,6 +700,8 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 		} catch(Throwable t) {
 			if (MyModuleContext.isDebug()) {
 				log(t);
+			} else {
+				Log.w("Inspector", t);
 			}
 		}
 		return cookie;
@@ -703,6 +740,12 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	
 	private Class<?> defineClassNative(Object thisObj, String name, final ClassLoader loader, final Object cookie, Class<?> clazz) {
 		try {
+			if (loader != null && clazz != null) {
+				for (Plugin plugin : context.getPlugins()) {
+					plugin.defineClass(loader, clazz);
+				}
+			}
+
 			if(name.contains("com.fuzhu8")) {
 				return clazz;
 			}

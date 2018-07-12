@@ -24,9 +24,9 @@ public class TraceAnti extends Native {
 			boolean traceSysCall,
 			boolean traceTrace,
 			int patchSSL) {
-		checkSupported();
-		
-		_traceAnti(dataDir, antiThreadCreate, traceFile, traceSysCall, traceTrace, patchSSL);
+		if (hasSupported()) {
+			_traceAnti(dataDir, antiThreadCreate, traceFile, traceSysCall, traceTrace, patchSSL);
+		}
 	}
 	
 	/**
@@ -45,9 +45,9 @@ public class TraceAnti extends Native {
 			int patchSSL);
 	
 	public void testAntiHook(int r0, int r1, int r2, int r3) {
-		checkSupported();
-		
-		_testAntiHook(r0, r1, r2, r3);
+		if (hasSupported()) {
+			_testAntiHook(r0, r1, r2, r3);
+		}
 	}
 	
 	/**
@@ -60,7 +60,7 @@ public class TraceAnti extends Native {
 	private native void _testAntiHook(int r0, int r1, int r2, int r3);
 	
 	public boolean nativeHook(int addr) {
-		checkSupported();
+		checkSupported("nativeHook");
 		
 		return _nativeHook(addr);
 	}
@@ -71,9 +71,9 @@ public class TraceAnti extends Native {
 	private native boolean _nativeHook(int addr);
 	
 	public void enableCollectBytecode(String filter) {
-		checkSupported();
-		
-		_enableCollectBytecode(StringUtils.isEmpty(filter) ? null : filter);
+		if (hasSupported()) {
+			_enableCollectBytecode(StringUtils.isEmpty(filter) ? null : filter);
+		}
 	}
 	
 	/**

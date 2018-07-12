@@ -23,7 +23,7 @@ abstract class UnknownSdk implements Sdk {
 		IPackageManager pm = ActivityThread.getPackageManager();
 		Map<String, PackageInfo> map = getInstalledPackages(pm);
 
-		List<PluginApk> pluginApks = new ArrayList<PluginApk>();
+		List<PluginApk> pluginApks = new ArrayList<>();
 		Apk inspectorApk = null;
 		Apk targetApk = null;
 		for(PackageInfo pi : map.values()) {

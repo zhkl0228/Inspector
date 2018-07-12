@@ -170,7 +170,7 @@ public class SystemInfo {
             putQuietly(systemInfo, "ssid", wifiInfo.getSSID());
             putQuietly(systemInfo, "bssid", wifiInfo.getBSSID());
             int ipAddress = wifiInfo.getIpAddress();
-            putQuietly(systemInfo, "ipAddress", ((ipAddress & 0xFF) + "." + (ipAddress >> 8 & 0xFF) + "." + (ipAddress >> 16 & 0xFF) + "." + (ipAddress >> 24 & 0xFF)));
+            putQuietly(systemInfo, "ipAddress", ((ipAddress & 0xff) + "." + (ipAddress >> 8 & 0xff) + "." + (ipAddress >> 16 & 0xff) + "." + (ipAddress >> 24 & 0xff)));
         }
         try {
             if(activeNetworkInfo != null) {
@@ -304,7 +304,11 @@ public class SystemInfo {
         }
 
         try {
-            putQuietly(systemInfo, "properties", getProperties());
+            putQuietly(systemInfo, "properties", executeShell("getprop"));
+        } catch(Throwable ignored) {}
+
+        try {
+            putQuietly(systemInfo, "mount", executeShell("mount"));
         } catch(Throwable ignored) {}
 
         input = null;
@@ -334,23 +338,61 @@ public class SystemInfo {
             IOUtils.closeQuietly(input);
         }
 
-        input = null;
-        try {
-            input = new FileInputStream(new File("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"));
-            putQuietly(systemInfo, "cpuinfo_max_freq", IOUtils.toString(input, "UTF-8"));
-        } catch (Throwable ignored) {
-        } finally {
-            IOUtils.closeQuietly(input);
-        }
+        JSONArray cpu = new JSONArray();
+        for(int i = 0; i < 32; i++) {
+            JSONObject core = new JSONObject();
 
-        input = null;
-        try {
-            input = new FileInputStream(new File("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq"));
-            putQuietly(systemInfo, "cpuinfo_min_freq", IOUtils.toString(input, "UTF-8"));
-        } catch (Throwable ignored) {
-        } finally {
-            IOUtils.closeQuietly(input);
+            input = null;
+            try {
+                input = new FileInputStream(new File("/sys/devices/system/cpu/cpu" + i + "/cpufreq/cpuinfo_max_freq"));
+                putQuietly(core, "cpuinfo_max_freq", IOUtils.toString(input, "UTF-8"));
+            } catch (Throwable ignored) {
+            } finally {
+                IOUtils.closeQuietly(input);
+            }
+
+            input = null;
+            try {
+                input = new FileInputStream(new File("/sys/devices/system/cpu/cpu" + i + "/cpufreq/cpuinfo_min_freq"));
+                putQuietly(core, "cpuinfo_min_freq", IOUtils.toString(input, "UTF-8"));
+            } catch (Throwable ignored) {
+            } finally {
+                IOUtils.closeQuietly(input);
+            }
+
+            input = null;
+            try {
+                input = new FileInputStream(new File("/sys/devices/system/cpu/cpu" + i + "/cpufreq/scaling_min_freq"));
+                putQuietly(core, "scaling_min_freq", IOUtils.toString(input, "UTF-8"));
+            } catch (Throwable ignored) {
+            } finally {
+                IOUtils.closeQuietly(input);
+            }
+
+            input = null;
+            try {
+                input = new FileInputStream(new File("/sys/devices/system/cpu/cpu" + i + "/cpufreq/scaling_max_freq"));
+                putQuietly(core, "scaling_max_freq", IOUtils.toString(input, "UTF-8"));
+            } catch (Throwable ignored) {
+            } finally {
+                IOUtils.closeQuietly(input);
+            }
+
+            input = null;
+            try {
+                input = new FileInputStream(new File("/sys/devices/system/cpu/cpu" + i + "/cpufreq/scaling_available_frequencies"));
+                putQuietly(core, "scaling_available_frequencies", IOUtils.toString(input, "UTF-8"));
+            } catch (Throwable ignored) {
+            } finally {
+                IOUtils.closeQuietly(input);
+            }
+
+            if (core.length() > 0) {
+                putQuietly(core, "index", i);
+                cpu.put(core);
+            }
         }
+        putQuietly(systemInfo, "cpu", cpu);
 
         input = null;
         try {
@@ -513,7 +555,7 @@ public class SystemInfo {
         }
     }
 
-    private static String getProperties() {
+    private static String executeShell(String cmd) {
         Process process = null;
         DataOutputStream outStream = null;
         BufferedReader inputStream = null;
@@ -526,7 +568,7 @@ public class SystemInfo {
             inputStream = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
             outStream.writeBytes("echo rg_cmd_start_magic\n");
-            outStream.writeBytes("getprop" + "\n");
+            outStream.writeBytes(cmd + "\n");
             outStream.flush();
             outStream.writeBytes("echo rg_cmd_end_magic\n");
             outStream.flush();
@@ -579,9 +621,8 @@ public class SystemInfo {
             } while (true);
 
             return strRet.toString();
-
         } catch (Exception e) {
-            return "execCmd exception: " + e.getMessage() + ", isSuExec: " + false + ", cmd: " + "getprop";
+            return "execCmd exception: " + e.getMessage() + ", isSuExec: " + false + ", cmd: " + cmd;
         } finally {
             IOUtils.closeQuietly(outStream);
             IOUtils.closeQuietly(inputStream);

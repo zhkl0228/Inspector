@@ -2,7 +2,7 @@ package com.fuzhu8.inspector.plugin;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.PendingIntent;
+import android.app.Application;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
@@ -102,21 +102,6 @@ public abstract class AbstractPlugin implements Plugin {
 	}
 
 	@Override
-	public void notifySendTextMessage(String destinationAddress, String scAddress, String text, PendingIntent sentIntent,
-			PendingIntent deliveryIntent, String label) {
-		inspector.println(label + ": " + destinationAddress + '\n' + text);
-	}
-
-	@Override
-	public void notifySendDataMessage(String destinationAddress, String scAddress, short destinationPort, byte[] data,
-			PendingIntent sentIntent, PendingIntent deliveryIntent) {
-		inspector.inspect(data, "sendDataMessage destinationAddress=" + destinationAddress +
-				", scAddress=" + scAddress +
-				", destinationPort=" + destinationPort +
-				", md5=" + com.fuzhu8.inspector.DigestUtils.md5Hex(data));
-	}
-
-	@Override
 	public final String getHelpContent() {
 		if(serverCommandCompleter == null) {
 			return "";
@@ -134,6 +119,7 @@ public abstract class AbstractPlugin implements Plugin {
 	private boolean initialized;
 	private Context appContext;
 
+	@Deprecated
 	@Override
 	public final void initialize(Context context) {
 		if(initialized) {
@@ -149,7 +135,16 @@ public abstract class AbstractPlugin implements Plugin {
 		}
 	}
 
-	protected abstract void initializeInternal(Context context);
+	@Override
+	public void onAttachApplication(Application application) {
+		initialize(application);
+	}
+
+    @Override
+    public void defineClass(ClassLoader classLoader, Class<?> clazz) {
+    }
+
+    protected abstract void initializeInternal(Context context);
 	protected abstract String getRegisterId();
 
 	@Override

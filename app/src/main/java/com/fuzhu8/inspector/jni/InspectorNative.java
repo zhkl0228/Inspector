@@ -19,8 +19,6 @@ public class InspectorNative extends Native {
 	}
 	
 	public void initializeNative(Inspector inspector) {
-		checkSupported();
-		
 		_initializeNative(inspector);
 	}
 	

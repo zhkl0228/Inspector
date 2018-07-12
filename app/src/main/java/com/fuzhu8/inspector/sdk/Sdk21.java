@@ -1,6 +1,5 @@
 package com.fuzhu8.inspector.sdk;
 
-import android.app.PendingIntent;
 import android.content.pm.IPackageManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -36,11 +35,11 @@ public class Sdk21 extends UnknownSdk implements Sdk {
 	public void hook_openDexFile(Hooker hooker, Hookable handler) {
 	}
 
-	@Override
+	/*@Override
 	public void hook_sendTextMessage(Hooker hooker, Hookable handler, Class<?> ISmsClass) throws NoSuchMethodException {
 		Method method = ISmsClass.getMethod("sendText", String.class, String.class, String.class, String.class, PendingIntent.class, PendingIntent.class);
 		hooker.hook(ISmsClass, method, handler, false);
-	}
+	}*/
 
 	@Override
 	protected Map<String, PackageInfo> getInstalledPackages(IPackageManager pm) {

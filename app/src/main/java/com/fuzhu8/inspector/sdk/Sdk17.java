@@ -1,19 +1,19 @@
 package com.fuzhu8.inspector.sdk;
 
+import android.content.pm.IPackageManager;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+
+import com.fuzhu8.inspector.advisor.Hookable;
+import com.fuzhu8.inspector.advisor.Hooker;
+import com.taobao.android.dexposed.XposedHelpers;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fuzhu8.inspector.advisor.Hookable;
-import com.fuzhu8.inspector.advisor.Hooker;
-import com.taobao.android.dexposed.XposedHelpers;
-
-import android.app.PendingIntent;
-import android.content.pm.IPackageManager;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import dalvik.system.DexFile;
 
 /**
@@ -68,10 +68,10 @@ public class Sdk17 extends UnknownSdk implements Sdk {
 		}
 	}
 
-	@Override
+	/*@Override
 	public void hook_sendTextMessage(Hooker hooker, Hookable handler, Class<?> ISmsClass) throws NoSuchMethodException {
 		Method method = ISmsClass.getMethod("sendText", String.class, String.class, String.class, String.class, PendingIntent.class, PendingIntent.class);
 		hooker.hook(ISmsClass, method, handler, false);
-	}
+	}*/
 
 }

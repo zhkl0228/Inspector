@@ -1,6 +1,19 @@
 package com.fuzhu8.inspector.dex.provider;
 
+import com.fuzhu8.inspector.Inspector;
+import com.fuzhu8.inspector.dex.BytecodeMethod;
+import com.fuzhu8.inspector.dex.ClassMethod;
+import com.fuzhu8.inspector.dex.DexFileData;
+import com.fuzhu8.inspector.dex.DexFileManager;
+import com.fuzhu8.inspector.dex.SmaliFile;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -11,24 +24,14 @@ import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
-
-import com.fuzhu8.inspector.Inspector;
-import com.fuzhu8.inspector.dex.BytecodeMethod;
-import com.fuzhu8.inspector.dex.ClassMethod;
-import com.fuzhu8.inspector.dex.DexFileManager;
-import com.fuzhu8.inspector.dex.DexFileData;
-import com.fuzhu8.inspector.dex.SmaliFile;
-
 import jf.dexlib.ClassDataItem;
 import jf.dexlib.ClassDataItem.EncodedMethod;
 import jf.dexlib.ClassDefItem;
+import jf.dexlib.Code.Instruction;
+import jf.dexlib.Code.InstructionIterator;
 import jf.dexlib.CodeItem;
 import jf.dexlib.IndexedSection;
 import jf.dexlib.MethodIdItem;
-import jf.dexlib.Code.Instruction;
-import jf.dexlib.Code.InstructionIterator;
 import jf.dexlib.Util.ByteArrayAnnotatedOutput;
 
 /**
@@ -38,13 +41,13 @@ import jf.dexlib.Util.ByteArrayAnnotatedOutput;
 public class StaticDexFileElement extends AbstractDexFileProvider implements
 		DexFileProvider {
 	
-	private final ByteBuffer buffer;
+	private final File dexFile;
 
 	public StaticDexFileElement(ClassLoader classLoader, String fileName,
-			ByteBuffer buffer) {
+								File dexFile) {
 		super(classLoader, fileName);
 		
-		this.buffer = buffer.asReadOnlyBuffer();
+		this.dexFile = dexFile;
 	}
 
 	@Override
@@ -59,23 +62,33 @@ public class StaticDexFileElement extends AbstractDexFileProvider implements
 
 	@Override
 	public DexFileData createDexFileData(Inspector inspector, DexFileManager dexFileManager, Map<String, BytecodeMethod> mainInstructionMap, boolean dexHunter) {
-		if(dexFileManager != null && mainInstructionMap != null) {
-			ByteBuffer buffer = fixDex(inspector, dexFileManager, this.buffer.duplicate(), mainInstructionMap);
-			return DexFileData.createFile(buffer, FilenameUtils.getBaseName(name), null, inspector, null);
+		try {
+			ByteBuffer bb = ByteBuffer.wrap(FileUtils.readFileToByteArray(dexFile));
+			if (dexFileManager != null && mainInstructionMap != null) {
+				ByteBuffer buffer = fixDex(inspector, dexFileManager, bb.duplicate(), mainInstructionMap);
+				return DexFileData.createFile(buffer, FilenameUtils.getBaseName(name), null, inspector, null);
+			}
+
+			return DexFileData.createFile(bb.duplicate(), FilenameUtils.getBaseName(name), null, inspector, null);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
 		}
-		
-		return DexFileData.createFile(buffer.duplicate(), FilenameUtils.getBaseName(name), null, inspector, null);
 	}
 
 	@Override
 	public SmaliFile[] baksmali(Inspector inspector, DexFileManager dexFileManager,
 			Map<String, BytecodeMethod> mainInstructionMap, boolean dexHunter, String className) {
-		if(dexFileManager != null && mainInstructionMap != null) {
-			ByteBuffer buffer = fixDex(inspector, dexFileManager, this.buffer.duplicate(), mainInstructionMap);
-			return DexFileData.baksmali(buffer, FilenameUtils.getBaseName(name), null, inspector, null, className, this);
+		try {
+			ByteBuffer bb = ByteBuffer.wrap(FileUtils.readFileToByteArray(dexFile));
+			if (dexFileManager != null && mainInstructionMap != null) {
+				ByteBuffer buffer = fixDex(inspector, dexFileManager, bb.duplicate(), mainInstructionMap);
+				return DexFileData.baksmali(buffer, FilenameUtils.getBaseName(name), null, inspector, null, className, this);
+			}
+
+			return DexFileData.baksmali(bb.duplicate(), FilenameUtils.getBaseName(name), null, inspector, null, className, this);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
 		}
-		
-		return DexFileData.baksmali(buffer.duplicate(), FilenameUtils.getBaseName(name), null, inspector, null, className, this);
 	}
 
 	private static ByteBuffer fixDex(Inspector inspector, DexFileManager dexFileManager, ByteBuffer buffer, Map<String, BytecodeMethod> mainInstructionMap) {
@@ -223,6 +236,9 @@ public class StaticDexFileElement extends AbstractDexFileProvider implements
 		}
 		
 		CodeItem code = method.codeItem;
+		if (code == null) {
+			return false;
+		}
 		
 		code.registerCount = newCode.getRegistersSize();
         code.inWords = newCode.getInsSize();

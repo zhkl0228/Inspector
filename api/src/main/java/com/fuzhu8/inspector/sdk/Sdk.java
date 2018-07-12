@@ -22,11 +22,6 @@ public interface Sdk {
 	void hook_openDexFile(Hooker hooker, Hookable handler);
 	
 	/**
-	 * ISms.Stub.Proxy.sendText
-	 */
-	void hook_sendTextMessage(Hooker hooker, Hookable handler, Class<?> ISmsClass) throws NoSuchMethodException;
-	
-	/**
 	 * 整合searchInspectorApk、searchPluginsApk、targetApk
 	 * @return wrapper
 	 */

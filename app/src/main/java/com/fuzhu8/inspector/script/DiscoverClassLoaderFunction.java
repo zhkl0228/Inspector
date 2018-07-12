@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.fuzhu8.inspector.script;
 
 import org.keplerproject.luajava.LuaException;
@@ -17,7 +14,7 @@ public class DiscoverClassLoaderFunction extends InspectorFunction {
 	
 	private final DexFileManager dexFileManager;
 
-	public DiscoverClassLoaderFunction(LuaState L, Inspector inspector, DexFileManager dexFileManager) {
+	DiscoverClassLoaderFunction(LuaState L, Inspector inspector, DexFileManager dexFileManager) {
 		super(L, inspector);
 		
 		this.dexFileManager = dexFileManager;
@@ -27,8 +24,8 @@ public class DiscoverClassLoaderFunction extends InspectorFunction {
 	 * @see org.keplerproject.luajava.JavaFunction#execute()
 	 */
 	@Override
-	public int execute() throws LuaException {
-		dexFileManager.discoverClassLoader();
+	public int execute() {
+		dexFileManager.discoverClassLoader(null);
 		return 0;
 	}
 

@@ -21,6 +21,7 @@ import com.fuzhu8.inspector.sdk.Sdk19;
 import com.fuzhu8.inspector.sdk.Sdk21;
 import com.fuzhu8.inspector.sdk.Sdk23;
 import com.fuzhu8.inspector.sdk.Sdk25;
+import com.fuzhu8.inspector.sdk.Sdk26;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 
@@ -56,7 +57,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 	protected abstract void log(String msg);
 	protected abstract void log(Throwable t);
 
-	@SuppressLint("PrivateApi")
+	@SuppressLint({"PrivateApi", "Assert"})
 	@Override
 	public final void startModule(final ApplicationInfo appInfo, String processName, File moduleDataDir, String collect_bytecode_text, ClassLoader classLoader) {
 		if (debug) {
@@ -78,13 +79,16 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 		LuaScriptManager scriptManager = createLuaScriptManager(context);
 		
 		Inspector inspector = createInspector(context, dexFileManager, scriptManager);
-		Platform.isAndroid();
+		if (!Platform.isAndroid()) {
+			throw new IllegalStateException();
+		}
 		Native.getLastError();//初始化JNA
 		Thread thread = new Thread(inspector);
 		thread.start();
 
 		scriptManager.setInspector(inspector);
 		dexFileManager.setInspector(inspector);
+		dexFileManager.discoverClassLoader(classLoader);
 		
 		try {
 			scriptManager.registerAll(dexFileManager);
@@ -150,6 +154,10 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 
 	@SuppressLint("ObsoleteSdkInt")
 	public static Sdk createSdk() {
+		if (Build.VERSION.SDK_INT >= 26) {
+			return new Sdk26(); // Oreo
+		}
+
 		if (Build.VERSION.SDK_INT >= 25) { // Nougat
 			return new Sdk25();
 		}

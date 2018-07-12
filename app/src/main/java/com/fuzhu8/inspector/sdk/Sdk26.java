@@ -8,17 +8,18 @@ import com.fuzhu8.inspector.advisor.Hookable;
 import com.fuzhu8.inspector.advisor.Hooker;
 import com.taobao.android.dexposed.XposedHelpers;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * android 7.1.2
- * Created by zhkl0228 on 2017/7/19.
+ * android 8.0.0
+ * Created by zhkl0228 on 2018/5/9.
  */
 
-public class Sdk25 extends UnknownSdk {
-
+public class Sdk26 extends UnknownSdk {
+    
     @Override
     public void hook_openDexFile(Hooker hooker, Hookable handler) {
     }
@@ -38,8 +39,8 @@ public class Sdk25 extends UnknownSdk {
                 map.put(pi.packageName, pi);
             }
             return map;
-        } catch (Exception e) {
-            throw new UnsupportedOperationException(e);
+        } catch (Throwable e) {
+            throw new UnsupportedOperationException("getInstalledPackages failed: pm=" + Arrays.toString(pm.getClass().getDeclaredMethods()), e);
         }
     }
 }

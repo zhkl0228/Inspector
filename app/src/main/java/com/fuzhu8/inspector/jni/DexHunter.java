@@ -21,15 +21,15 @@ public class DexHunter extends Native {
 	}
 	
 	public void saveDexFileByCookie(long cookie, String dataDir) {
-		checkSupported();
-		
-		_saveDexFileByCookie((int) cookie, dataDir);
+		if (hasSupported()) {
+			_saveDexFileByCookie((int) cookie, dataDir);
+		}
 	}
 
 	private native void _saveDexFileByCookie(int cookie, String dataDir);
 	
 	public ByteBuffer dumpDexFileByCookie(long cookie, ClassLoader loader) {
-		checkSupported();
+		checkSupported("dumpDexFileByCookie loader=" + loader);
 		
 		return _dumpDexFileByCookie((int) cookie, loader);
 	}
