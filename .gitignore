@@ -10,8 +10,5 @@ app/app.iml
 app/build/
 app/debug.keystore
 app/lint.xml
-app/src/main/assets/armeabi-v7a/
-app/src/main/assets/armeabi/
-app/src/main/assets/x86/
 import-summary.txt
 local.properties

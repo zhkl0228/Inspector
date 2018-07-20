@@ -44,7 +44,7 @@ android {
 
     externalNativeBuild {
          ndkBuild {
-            path 'src/main/jni/Android.mk'
+             path 'src/main/jni/Android.mk'
         }
     }
 
@@ -78,6 +78,7 @@ dependencies {
     compile 'com.facebook.stetho:stetho:1.5.0'
     compile 'com.facebook.stetho:stetho-urlconnection:1.5.0'
 
+    //noinspection GradleDependency
     compile 'com.lahm.library:easy-protector-release:latest.release'
 
     provided 'de.robv.android.xposed:XposedBridgeApi:60'
