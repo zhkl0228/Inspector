@@ -6,6 +6,7 @@ import android.os.Environment;
 
 import com.fuzhu8.inspector.advisor.Hooker;
 import com.fuzhu8.inspector.dex.DexFileManager;
+import com.fuzhu8.inspector.plugin.MultiDex;
 import com.fuzhu8.inspector.plugin.Plugin;
 import com.fuzhu8.inspector.plugin.PluginContext;
 import com.fuzhu8.inspector.root.LineListener;
@@ -133,10 +134,14 @@ public class MyModuleContext implements FileFilter, ModuleContext {
 			InputStream is = null;
 			try {
 				File libPath = new File(Environment.getDataDirectory(), "data/" + pluginApk.getPackageName() + "/lib");
+				File filesDir = new File(Environment.getDataDirectory(), "data/" + targetApk.getPackageName() + "/files");
 
 				if (pluginApk.getPluginClassName() != null) {
 					try {
-						ClassLoader pluginClassLoader = new PathClassLoader(pluginApk.getApkFile().getAbsolutePath(), libPath.getAbsolutePath(), classLoader);
+						final String apkPath = pluginApk.getApkFile().getAbsolutePath();
+						ClassLoader pluginClassLoader = new PathClassLoader(apkPath, libPath.getAbsolutePath(), classLoader);
+						MultiDex.install(filesDir, apkPath, pluginClassLoader);
+
 						Class<?> pluginClass = pluginClassLoader.loadClass(pluginApk.getPluginClassName());
 						Thread.currentThread().setContextClassLoader(pluginClassLoader);
 

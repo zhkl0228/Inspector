@@ -14,7 +14,7 @@ public class Apk {
     private final File apkFile;
     private final String packageName;
 
-    public Apk(String versionName, int versionCode, File apkFile, String packageName) {
+    Apk(String versionName, int versionCode, File apkFile, String packageName) {
         super();
         this.versionName = versionName;
         this.versionCode = versionCode;
