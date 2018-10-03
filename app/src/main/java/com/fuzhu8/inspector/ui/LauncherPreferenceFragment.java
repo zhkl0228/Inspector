@@ -309,13 +309,45 @@ public class LauncherPreferenceFragment extends PreferenceFragment {
 		}
 	}
 
-	protected boolean startInspect(PackageManager pm, String packageName, int pid, boolean launchApp) {
-		if(!rootUtil.startShell()) {
-			return false;
+	private static File moveAssets(Context context, String executable) {
+		File filesDir = context.getFilesDir();
+		filesDir.mkdirs();
+
+		File target = new File(filesDir, executable);
+		InputStream inputStream = null;
+		OutputStream outputStream = null;
+		File tmp = null;
+		try {
+			inputStream = context.getAssets().open(executable);
+			tmp = File.createTempFile(executable, "", filesDir);
+			outputStream = new FileOutputStream(tmp);
+			org.apache.commons.io.IOUtils.copy(inputStream, outputStream);
+
+			if(!target.canExecute() || !DigestUtils.md5Hex(FileUtils.readFileToByteArray(target)).equals(DigestUtils.md5Hex(FileUtils.readFileToByteArray(tmp)))) {
+				target.delete();
+				FileUtils.moveFile(tmp, target);
+				target.setExecutable(true);
+			}
+			return target;
+		} catch(IOException e) {
+			Log.d("Inspector", e.getMessage(), e);
+			return null;
+		} finally {
+			FileUtils.deleteQuietly(tmp);
+			IOUtils.closeQuietly(outputStream);
+			IOUtils.closeQuietly(inputStream);
 		}
-		
+	}
+
+	protected boolean startInspect(PackageManager pm, String packageName, int pid, boolean launchApp) {
 		File hijack;
 		if((hijack = moveExecutable(getActivity(), "hijack")) == null) {
+			return false;
+		}
+
+		moveAssets(getActivity(), "hijack.sh");
+
+		if(!rootUtil.startShell()) {
 			return false;
 		}
 		
