@@ -261,7 +261,14 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		inspector.addCommandHelp("inspector:stopVpn()", "inspector:stopVpn(); -- Request stop vpn");
 
 		inspector.addCommandHelp("inspector:startPcap()", "inspector:startPcap(); -- Request start pcap, require root");
+		inspector.addCommandHelp("inspector:frida()", "inspector:frida(); -- Load frida gadget");
 		// inspector.addCommandHelp("inspector:stopPcap()", "inspector:stopPcap(); -- Request stop pcap");
+	}
+
+	@SuppressWarnings("unused")
+	private void frida() {
+		System.loadLibrary("frida-gadget");
+		println("Load frida gadget successfully.");
 	}
 
 	private void onKrakenCapture(byte[] packet, int datalink) {
