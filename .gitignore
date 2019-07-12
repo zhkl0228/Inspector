@@ -3,6 +3,7 @@
 .idea/
 .svn/
 *.iml
+*.DS_Store
 api/api.iml
 api/build/
 api/target/
