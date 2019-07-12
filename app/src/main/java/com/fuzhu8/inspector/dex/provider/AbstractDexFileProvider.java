@@ -87,7 +87,16 @@ public abstract class AbstractDexFileProvider implements DexFileProvider {
 
 	@Override
 	public boolean accept(String dexPath) {
-		return getMyPath().equals(dexPath);
+		String path = getMyPath();
+		if (path.equals(dexPath)) {
+			return true;
+		} else {
+			if (dexPath.endsWith("*")) {
+				return path.startsWith(dexPath.substring(0, dexPath.length() - 1));
+			}
+
+			return false;
+		}
 	}
 
 	protected static Collection<String> getClassesFromDexFile(DexFile dexFile) {

@@ -130,7 +130,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 			}
 		}
 
-		new SSLTrustKiller(context);
+		// new SSLTrustKiller(context);
 		afterStartModule(context, inspector, dexFileManager, scriptManager);
 
 		inspector.println("Inspect process [" + processName + "][" + Process.myPid() + "] successfully! ");

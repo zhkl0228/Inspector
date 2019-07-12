@@ -2,6 +2,7 @@
 .gradle/
 .idea/
 .svn/
+*.iml
 api/api.iml
 api/build/
 api/target/

@@ -1,9 +1,8 @@
 package com.fuzhu8.inspector.script;
 
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaState;
-
 import com.fuzhu8.inspector.Inspector;
+
+import org.keplerproject.luajava.LuaState;
 
 /**
  * @author zhkl0228
@@ -11,7 +10,7 @@ import com.fuzhu8.inspector.Inspector;
  */
 public class LogFunction extends InspectorFunction {
 
-	public LogFunction(LuaState L, Inspector inspector) {
+	LogFunction(LuaState L, Inspector inspector) {
 		super(L, inspector);
 	}
 
@@ -19,7 +18,7 @@ public class LogFunction extends InspectorFunction {
 	 * @see org.keplerproject.luajava.JavaFunction#execute()
 	 */
 	@Override
-	public int execute() throws LuaException {
+	public int execute() {
 		if(L.getTop() >= 2) {
 			inspector.println(getParam(2));
 		}

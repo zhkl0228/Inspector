@@ -16,7 +16,7 @@ android {
     defaultConfig {
         applicationId "com.fuzhu8.inspector"
         minSdkVersion 19
-        //noinspection OldTargetApi
+        //noinspection ExpiredTargetSdkVersion,OldTargetApi
         targetSdkVersion 25
         versionCode 260
         versionName "2.6.0"
@@ -79,7 +79,7 @@ dependencies {
     compile 'com.facebook.stetho:stetho-urlconnection:1.5.0'
 
     //noinspection GradleDependency
-    compile 'com.lahm.library:easy-protector-release:latest.release'
+    compile 'com.lahm.library:easy-protector-release:1.1.0'
 
     provided 'de.robv.android.xposed:XposedBridgeApi:60'
     provided 'android:full_framework:15'

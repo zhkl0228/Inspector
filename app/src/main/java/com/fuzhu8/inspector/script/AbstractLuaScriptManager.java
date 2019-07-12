@@ -77,6 +77,7 @@ public abstract class AbstractLuaScriptManager extends AbstractAdvisor
 		// registerFunction("newInstance", new NewInstanceFunction(luaState, inspector, dexFileManager));
 		registerFunction("class", new ClassFunction(luaState, inspector, dexFileManager));
 		registerFunction("eFunc", new EmulatorCallFunction(luaState, inspector));
+		registerFunction("json", new JSONFunction(luaState, inspector));
 		
 		registerGlobalObject("inspector", inspector);
 

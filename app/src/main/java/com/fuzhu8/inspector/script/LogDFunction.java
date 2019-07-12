@@ -1,14 +1,10 @@
-/**
- * 
- */
 package com.fuzhu8.inspector.script;
 
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaState;
+import android.util.Log;
 
 import com.fuzhu8.inspector.Inspector;
 
-import android.util.Log;
+import org.keplerproject.luajava.LuaState;
 
 /**
  * @author zhkl0228
@@ -16,7 +12,7 @@ import android.util.Log;
  */
 public class LogDFunction extends InspectorFunction {
 
-	public LogDFunction(LuaState L, Inspector inspector) {
+	LogDFunction(LuaState L, Inspector inspector) {
 		super(L, inspector);
 	}
 
@@ -24,7 +20,7 @@ public class LogDFunction extends InspectorFunction {
 	 * @see org.keplerproject.luajava.JavaFunction#execute()
 	 */
 	@Override
-	public int execute() throws LuaException {
+	public int execute() {
 		if(L.getTop() > 1) {
 			Log.d("Inspector", String.valueOf(getParam(2)));
 		}

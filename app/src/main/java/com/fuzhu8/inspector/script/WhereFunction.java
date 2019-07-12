@@ -1,12 +1,8 @@
-/**
- * 
- */
 package com.fuzhu8.inspector.script;
 
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaState;
-
 import com.fuzhu8.inspector.Inspector;
+
+import org.keplerproject.luajava.LuaState;
 
 /**
  * @author zhkl0228
@@ -14,7 +10,7 @@ import com.fuzhu8.inspector.Inspector;
  */
 public class WhereFunction extends InspectorFunction {
 
-	public WhereFunction(LuaState L, Inspector inspector) {
+	WhereFunction(LuaState L, Inspector inspector) {
 		super(L, inspector);
 	}
 
@@ -22,7 +18,7 @@ public class WhereFunction extends InspectorFunction {
 	 * @see org.keplerproject.luajava.JavaFunction#execute()
 	 */
 	@Override
-	public int execute() throws LuaException {
+	public int execute() {
 		String label = "where";
 		if(L.getTop() > 1) {
 			label = String.valueOf(getParam(2));

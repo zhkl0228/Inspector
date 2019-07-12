@@ -14,6 +14,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.pm.Signature;
 import android.content.res.Configuration;
 import android.hardware.Camera;
 import android.hardware.Sensor;
@@ -145,6 +146,7 @@ import capstone.Arm;
 import capstone.Arm_const;
 import capstone.Capstone;
 import cn.banny.utils.StringUtils;
+import de.robv.android.xposed.XposedBridge;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;
@@ -184,6 +186,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		executeMyHook();
 
 		global = this.createCommandCompleter(null);
+		global.addCommandHelp("json", "json(obj); -- print json of obj to console");
 		global.addCommandHelp("log", "log(msg); -- log to console");
 		// global.addCommandHelp("logd", "logd(msg); -- log to logcat");
 		global.addCommandHelp("where", "where(msg?); -- print the stack trace to console");
@@ -1436,7 +1439,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 	@SuppressLint("HardwareIds")
 	@SuppressWarnings("deprecated")
-	public void info() {
+	public void info() throws NameNotFoundException, NoSuchFieldException, IllegalAccessException {
 		Context context = getAppContext();
 		if (context != null) {
 			try {
@@ -1503,6 +1506,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			println("filesDir: " + context.getFilesDir());
 			// println("obbDir: " + context.getObbDir());
 			println("dataDir: " + context.getApplicationInfo().dataDir);
+			println("sourceDir: " + context.getApplicationInfo().sourceDir);
 			println("publicSourceDir: " + context.getApplicationInfo().publicSourceDir);
 			println("packageCodePath: " + context.getPackageCodePath());
 			println("packageResourcePath: " + context.getPackageResourcePath());
@@ -1567,6 +1571,14 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		printStorageSize("rootDirectorySize", Environment.getRootDirectory());
 		printStorageSize("dataDirectorySize", Environment.getDataDirectory());
 
+		if (context != null) {
+			@SuppressLint("PackageManagerGetSignatures")
+			PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
+			for (Signature signature : packageInfo.signatures) {
+				println("signature: " + Hex.encodeHexString(signature.toByteArray()));
+			}
+		}
+
 		try {
 			int cameras = Camera.getNumberOfCameras();
 			List<JSONObject> cameraInfos = new ArrayList<JSONObject>(cameras);
@@ -1598,9 +1610,17 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		println("isRoot: " + EasyProtectorLib.checkIsRoot());
-		println("runningInEmulator: " + EasyProtectorLib.checkIsRunningInEmulator());
-		println("usingMultiVirtualApp: " + EasyProtectorLib.checkIsUsingMultiVirtualApp());
+		println("runningInEmulator: " + EasyProtectorLib.checkIsRunningInEmulator(context, null));
+		// println("usingMultiVirtualApp: " + EasyProtectorLib.checkIsRunningInVirtualApk());
 		println("xposedExist: " + EasyProtectorLib.checkIsXposedExist());
+
+		Field field = XposedBridge.class.getDeclaredField("disableHooks");
+		field.setAccessible(true);
+		boolean disableHooks = field.getBoolean(null);
+		if (disableHooks) {
+			field.set(null, false);
+			println("Re enable xposed hooks");
+		}
 	}
 
 	@SuppressLint({"MissingPermission", "HardwareIds"})
@@ -2071,6 +2091,12 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		for (Plugin plugin : this.context.getPlugins()) {
 			plugin.initialize(appContext);
 		}
+
+		try {
+			luaScriptManager.registerGlobalObject("context", appContext);
+		} catch (Exception e) {
+			println(e);
+		}
 	}
 
 	private synchronized void onAttachApplication(Application application) {
@@ -2094,6 +2120,12 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 		for (Plugin plugin : this.context.getPlugins()) {
 			plugin.onAttachApplication(application);
+		}
+
+		try {
+			luaScriptManager.registerGlobalObject("context", application);
+		} catch (Exception e) {
+			println(e);
 		}
 	}
 

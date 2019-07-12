@@ -694,13 +694,13 @@ static void patch_lib(patch_settings settings){
 	HookStruct libdl;
 	strcpy(libdl.SOName, "libdl.so");
 
-	// inline_hook((void *)dexFileParse, (void *)new_dexFileParse, "dexFileParse", (void **)&old_dexFileParse);
-	inline_mshook((void *)dexFileParse, (void *)new_dexFileParse, "dexFileParse", (void **)&old_dexFileParse);
-
     if (settings.trace_string) {
         // hook(&libc, (void *) new_strlen, "strlen", (void **)&old_strlen);
         // hook(&libc, (void *) new_strncpy, "strncpy", (void **)&old_strncpy);
         // hook(&libc, (void *) new_strncmp, "strncmp", (void **)&old_strncmp);
+
+		// inline_hook((void *)dexFileParse, (void *)new_dexFileParse, "dexFileParse", (void **)&old_dexFileParse);
+		// inline_mshook((void *)dexFileParse, (void *)new_dexFileParse, "dexFileParse", (void **)&old_dexFileParse);
     }
 
 	if(settings.trace_file) {

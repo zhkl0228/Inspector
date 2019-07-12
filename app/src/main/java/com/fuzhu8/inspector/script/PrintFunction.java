@@ -1,12 +1,8 @@
-/**
- * 
- */
 package com.fuzhu8.inspector.script;
 
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaState;
-
 import com.fuzhu8.inspector.Inspector;
+
+import org.keplerproject.luajava.LuaState;
 
 /**
  * @author zhkl0228
@@ -14,7 +10,7 @@ import com.fuzhu8.inspector.Inspector;
  */
 public class PrintFunction extends InspectorFunction {
 
-	public PrintFunction(LuaState L, Inspector inspector) {
+	PrintFunction(LuaState L, Inspector inspector) {
 		super(L, inspector);
 	}
 
@@ -22,7 +18,7 @@ public class PrintFunction extends InspectorFunction {
 	 * @see org.keplerproject.luajava.JavaFunction#execute()
 	 */
 	@Override
-	public int execute() throws LuaException {
+	public int execute() {
 		if(L.getTop() > 1) {
 			inspector.println(L.getLuaObject(2));
 		}

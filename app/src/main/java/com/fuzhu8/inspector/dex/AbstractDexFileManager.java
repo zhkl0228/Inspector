@@ -275,31 +275,32 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 
 	@Override
 	public String[] requestHookDex(String dexPath, boolean hookConstructor, String invokeFilter, String classFilter) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-		DexFileProvider dex = null;
+		List<DexFileProvider> dexList = new ArrayList<>(5);
 		for(DexFileProvider dexFileProvider : dumpDexFiles(true)) {
 			if(dexFileProvider.accept(dexPath)) {
-				dex = dexFileProvider;
-				break;
+				dexList.add(dexFileProvider);
 			}
 		}
-		if(dex == null) {
+		if(dexList.isEmpty()) {
 			return new String[0];
 		}
 		
 		Set<String> hooked = new LinkedHashSet<String>();
-		for(String className : dex.getClasses()) {
-			try {
-				if(classFilter != null && !className.contains(classFilter)) {
-					continue;
+		for (DexFileProvider dex : dexList) {
+			for(String className : dex.getClasses()) {
+				try {
+					if(classFilter != null && !className.contains(classFilter)) {
+						continue;
+					}
+
+					Class<?> clazz = dex.loadClass(className);
+
+					hookAllMember(clazz, inspector, hookConstructor, invokeFilter != null && className.contains(invokeFilter));
+					hooked.add(className);
+				} catch(ClassNotFoundException ignored) {
+				} catch(Throwable t) {
+					inspector.println(t);
 				}
-				
-				Class<?> clazz = dex.loadClass(className);
-				
-				hookAllMember(clazz, inspector, hookConstructor, invokeFilter != null && className.contains(invokeFilter));
-				hooked.add(className);
-			} catch(ClassNotFoundException ignored) {
-			} catch(Throwable t) {
-				inspector.println(t);
 			}
 		}
 		

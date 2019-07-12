@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         minSdkVersion 19
-        //noinspection OldTargetApi
+        //noinspection ExpiredTargetSdkVersion,OldTargetApi
         targetSdkVersion 25
         versionCode 260
         versionName "2.6.0"
