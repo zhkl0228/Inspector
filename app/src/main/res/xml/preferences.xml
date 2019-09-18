@@ -17,6 +17,13 @@
             android:dependency="pref_enable_status">
         </CheckBoxPreference>
         <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="pref_app_service"
+            android:summary="@string/pref_app_service_sum"
+            android:title="@string/pref_app_service_title"
+            android:dependency="pref_enable_status">
+        </CheckBoxPreference>
+        <CheckBoxPreference
             android:defaultValue="false"
             android:key="pref_system_app"
             android:summary="@string/pref_system_app_sum"

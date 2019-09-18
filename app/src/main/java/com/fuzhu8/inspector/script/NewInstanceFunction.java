@@ -1,19 +1,16 @@
-/**
- * 
- */
 package com.fuzhu8.inspector.script;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-
-import org.keplerproject.luajava.LuaException;
-import org.keplerproject.luajava.LuaObject;
-import org.keplerproject.luajava.LuaState;
 
 import com.fuzhu8.inspector.Inspector;
 import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.dex.provider.DexFileProvider;
 import com.fuzhu8.inspector.script.hook.HookFunctionRequest;
+
+import org.keplerproject.luajava.LuaException;
+import org.keplerproject.luajava.LuaObject;
+import org.keplerproject.luajava.LuaState;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * @author zhkl0228
@@ -34,7 +31,7 @@ public class NewInstanceFunction extends InspectorFunction {
 	 * @see org.keplerproject.luajava.JavaFunction#execute()
 	 */
 	@Override
-	public int execute() throws LuaException {
+	public int execute() {
 		int count = L.getTop();
 		if(count >= 2) {
 			String className = getParam(2).getString();

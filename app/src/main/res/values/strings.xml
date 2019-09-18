@@ -87,6 +87,9 @@
     <string name="pref_system_app_title">System-App</string>
     <string name="pref_system_app_sum">是否Hook系统应用</string>
 
+    <string name="pref_app_service_title">App-Service</string>
+    <string name="pref_app_service_sum">是否Hook应用服务</string>
+
     <string name="pref_stetho_sum">是否启用Stetho</string>
     <string name="pref_stetho_title">Enable-Stetho</string>
 

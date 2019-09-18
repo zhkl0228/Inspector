@@ -220,6 +220,11 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 			return pref.getBoolean("pref_system_app", false);
 		}
 
+		boolean canHookAppService = pref.getBoolean("pref_app_service", true);
+		if (!canHookAppService && lpparam.processName.contains(":")) {
+			return false;
+		}
+
 		return !BuildConfig.APPLICATION_ID.equals(lpparam.packageName); // 禁止hook自身
 	}
 
