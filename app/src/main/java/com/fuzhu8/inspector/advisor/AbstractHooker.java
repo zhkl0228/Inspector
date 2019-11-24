@@ -16,7 +16,7 @@ public abstract class AbstractHooker implements Hooker, HookManager {
 	@Override
 	public void log(Object msg) {
 		if(msg instanceof Throwable) {
-			log(Throwable.class.cast(msg));
+			log((Throwable) msg);
 		} else if(msg != null) {
 			log(msg.toString());
 		}

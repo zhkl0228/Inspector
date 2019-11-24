@@ -70,6 +70,7 @@ import com.fuzhu8.inspector.http.HttpUtils;
 import com.fuzhu8.inspector.io.ByteBufferCache;
 import com.fuzhu8.inspector.io.ByteBufferInspectCache;
 import com.fuzhu8.inspector.io.Command;
+import com.fuzhu8.inspector.io.CommandCache;
 import com.fuzhu8.inspector.io.Console;
 import com.fuzhu8.inspector.io.InputStreamCache;
 import com.fuzhu8.inspector.io.InspectCache;
@@ -130,6 +131,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -971,6 +973,11 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			ioe.printStackTrace();
 			closeConsole();
 		}
+	}
+
+	@Override
+	public void sendCommand(String type, String data) {
+		writeToConsole(new CommandCache(type, data));
 	}
 
 	@Override
@@ -2404,7 +2411,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			localServerSocket = null;
 		}
 		String label = String.valueOf(this.label);
-		localServerSocket = new LocalServerSocket(PREFIX + serverSocketPort + '_' + context.getProcessName() + '_' + Hex.encodeHexString(label.getBytes("UTF-8")) + "_discover");
+		localServerSocket = new LocalServerSocket(PREFIX + serverSocketPort + '_' + context.getProcessName() + '_' + Hex.encodeHexString(label.getBytes(StandardCharsets.UTF_8)) + "_discover");
 	}
 
 	private static final String PREFIX = "inspector_";

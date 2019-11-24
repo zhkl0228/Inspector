@@ -47,7 +47,7 @@ public class PermissionFaker19 extends PermissionFaker {
 		} catch(Exception e) {
 			log(e);
 		}
-		
+
 		try {
 			hook("com.android.server.pm.PackageManagerService", "isNewPlatformPermissionForPackage", String.class, Package.class);
 		} catch (Exception e) {

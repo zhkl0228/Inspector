@@ -70,7 +70,7 @@ public class XposedPackageFaker implements FakeParsePackageResult {
 			Class<?> processRecordClass = classLoader.loadClass("com.android.server.am.ProcessRecord");
 			XposedHelpers.findAndHookMethod(activityManagerServiceClass, "killAppAtUsersRequest", processRecordClass, Dialog.class, new XC_MethodReplacement() {
 				@Override
-				protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+				protected Object replaceHookedMethod(MethodHookParam param) {
 					return null;
 				}
 			});

@@ -18,6 +18,8 @@ public interface Inspector extends Runnable, Appender {
 	void inspect(ByteBuffer data, String label);
 	
 	void writeToConsole(InspectCache cache);
+
+	void sendCommand(String type, String data);
 	
 	void inspect(byte[] data, boolean send);
 	
