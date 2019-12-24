@@ -83,5 +83,6 @@ dependencies {
 
     provided 'de.robv.android.xposed:XposedBridgeApi:60'
     provided 'android:full_framework:15'
+    provided 'cn.android.bridge:AndroidBridge:90'
 }
 

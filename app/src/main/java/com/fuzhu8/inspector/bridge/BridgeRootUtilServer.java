@@ -1,4 +1,10 @@
-package com.fuzhu8.inspector.xposed;
+package com.fuzhu8.inspector.bridge;
+
+import android.os.Process;
+
+import com.fuzhu8.inspector.root.RootUtilServer;
+
+import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -6,23 +12,18 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Random;
 
-import org.apache.commons.io.IOUtils;
-
-import com.fuzhu8.inspector.root.RootUtilServer;
-
-import android.os.Process;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
+import cn.android.bridge.AndroidBridge;
+import cn.android.bridge.XposedHelpers;
 
 /**
  * @author zhkl0228
  *
  */
-public class XposedRootUtilServer implements RootUtilServer {
+public class BridgeRootUtilServer implements RootUtilServer {
 	
 	private final int port;
 	
-	private XposedRootUtilServer(int port) {
+	private BridgeRootUtilServer(int port) {
 		super();
 
 		this.port = port;
@@ -30,9 +31,9 @@ public class XposedRootUtilServer implements RootUtilServer {
 
 	private static final int PORT_MIN = 10000;
 	
-	public static XposedRootUtilServer startRootUtilServer() {
+	public static BridgeRootUtilServer startRootUtilServer() {
 		if(Process.myUid() != 0) {
-			XposedBridge.log("startRootUtilServer uid=" + Process.myUid());
+			AndroidBridge.log("startRootUtilServer uid=" + Process.myUid());
 			return null;
 		}
 		
@@ -49,14 +50,14 @@ public class XposedRootUtilServer implements RootUtilServer {
 				} catch(IOException ignored) {}
 			}
 			IOUtils.closeQuietly(server);
-			XposedRootUtilServer rootUtilServer = new XposedRootUtilServer(port);
-			Integer pid = (Integer) XposedHelpers.callStaticMethod(XposedRootUtilServer.class.getClassLoader().loadClass("dalvik.system.Zygote"), "fork");
+			BridgeRootUtilServer rootUtilServer = new BridgeRootUtilServer(port);
+			Integer pid = (Integer) XposedHelpers.callStaticMethod(BridgeRootUtilServer.class.getClassLoader().loadClass("dalvik.system.Zygote"), "fork");
 			if(pid == 0) {
 				rootUtilServer.startServer();
 			}
 			return rootUtilServer;
 		} catch(Throwable t) {
-			XposedBridge.log(t);
+			AndroidBridge.log(t);
 		}
 		return null;
 	}
@@ -73,9 +74,9 @@ public class XposedRootUtilServer implements RootUtilServer {
 			server = new ServerSocket();
 			server.bind(new InetSocketAddress("localhost", port));
 			server.setSoTimeout(0);
-			XposedBridge.log("start BridgeRootUtilServer on port " + port + " with pid " + Process.myPid() + " successfully! ");
+			AndroidBridge.log("start BridgeRootUtilServer on port " + port + " with pid " + Process.myPid() + " successfully! ");
 		} catch(Throwable e) {
-			XposedBridge.log(e);
+			AndroidBridge.log(e);
 			
 			IOUtils.closeQuietly(server);
 			this.server = null;
@@ -85,13 +86,13 @@ public class XposedRootUtilServer implements RootUtilServer {
 			try {
 				acceptSocket(server);
 			} catch(Throwable t) {
-				XposedBridge.log(t);
+				AndroidBridge.log(t);
 			}
 		}
 		
 		IOUtils.closeQuietly(server);
 		this.server = null;
-		XposedBridge.log("stop BridgeRootUtilServer successfully! ");
+		AndroidBridge.log("stop BridgeRootUtilServer successfully! ");
 		Process.killProcess(Process.myPid());
 	}
 

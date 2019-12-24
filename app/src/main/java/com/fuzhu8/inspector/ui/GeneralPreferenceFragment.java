@@ -24,7 +24,7 @@ public class GeneralPreferenceFragment extends PreferenceFragment {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
-		getPreferenceManager().setSharedPreferencesMode(Context.MODE_WORLD_READABLE);
+		getPreferenceManager().setSharedPreferencesMode(Build.VERSION.SDK_INT >= 25 ? Context.MODE_PRIVATE : Context.MODE_WORLD_READABLE);
 		
 		addPreferencesFromResource(R.xml.preferences);
 		

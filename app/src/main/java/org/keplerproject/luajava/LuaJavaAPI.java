@@ -273,6 +273,12 @@ public final class LuaJavaAPI
 	  if(!"invoke".equals(methodName) && !"call".equals(methodName)) {
 		  return false;
 	  }
+
+	  try {
+		  XCMethodPointer = clazz.getClassLoader().loadClass("cn.android.bridge.callbacks.XCMethodPointer");
+		  return XCMethodPointer.isAssignableFrom(clazz);
+	  } catch(ClassNotFoundException ignored) {
+	  }
 	  
 	  try {
 		  XCMethodPointer = clazz.getClassLoader().loadClass("de.robv.android.xposed.callbacks.XCMethodPointer");
