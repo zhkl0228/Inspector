@@ -28,6 +28,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
+import android.os.Looper;
 import android.os.Process;
 import android.os.StatFs;
 import android.provider.Settings;
@@ -955,9 +956,13 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 	private final Queue<InspectCache> cacheQueue = new LinkedBlockingQueue<>();
 
+	private static boolean isMainThread() {
+		return Looper.getMainLooper() == Looper.myLooper();
+	}
+
 	@Override
 	public synchronized final void writeToConsole(InspectCache cache) {
-		if (console == null) {
+		if (console == null || isMainThread()) {
 			if (cache.canCache()) {
 				cacheQueue.offer(cache);
 				while (cacheQueue.size() > 512) {

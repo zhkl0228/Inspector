@@ -86,12 +86,17 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 				discoveredClassLoaders.add(classLoader);
 			}
 			Class<?> VMStack = Class.forName("dalvik.system.VMStack");
-			Class<?>[] classes = (Class<?>[]) XposedHelpers.callStaticMethod(VMStack, "getClasses", -1);
-			for(Class<?> clazz : classes) {
-				ClassLoader cl = clazz.getClassLoader();
-				if(discoveredClassLoaders.add(cl)) {
-					inspector.println("discoverClassLoader: " + cl);
-					notifyClassLoader(cl);
+			for (Method method : VMStack.getDeclaredMethods()) {
+				if ("getClasses".equals(method.getName()) && Modifier.isStatic(method.getModifiers())) {
+					Class<?>[] classes = (Class<?>[]) method.invoke(null, -1);
+					for(Class<?> clazz : classes) {
+						ClassLoader loader = clazz.getClassLoader();
+						if(discoveredClassLoaders.add(loader)) {
+							inspector.println("discoverClassLoader: " + loader);
+							notifyClassLoader(loader);
+						}
+					}
+					break;
 				}
 			}
 		} catch(Throwable e) {
@@ -111,7 +116,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	@Override
 	public Collection<DexFileProvider> dumpDexFiles(boolean includeBootClassPath) {
 		Set<DexFileProvider> set = new LinkedHashSet<DexFileProvider>();
-		if(includeBootClassPath) {
+		if(includeBootClassPath && Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) {
 			try {
 				for(ClassPathEntry cpe : dvmUtil.getDvmGlobals().getBootClassPath()) {
 					BootClassPathElement dex = new BootClassPathElement(ClassLoader.getSystemClassLoader(), cpe.getFileName(), cpe.getDvmDex());
@@ -143,6 +148,10 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	}
 
 	private void readDexs(Set<DexFileProvider> dexs, ClassLoader loader) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+			return;
+		}
+
 		if(inspector.isDebug()) {
 			inspector.println("readDexs loaderClass=" + loader.getClass() + ", loader=" + loader);
 		}
@@ -150,7 +159,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 		for(DexFileCookie cookie : readDexFileCookies(loader)) {
 			DexFileProvider dex = new DexPathListElement(cookie.getClassLoader(), cookie.getCookie(), cookie.getFileName());
 			dexs.add(dex);
-			
+
 			if(inspector.isDebug()) {
 				inspector.println("readDexs cookie=" + cookie + ", dex=" + dex);
 			}
@@ -534,7 +543,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 				}
 				
 				File file = new File(p);
-				if(file.isDirectory()) {
+				if(file.isDirectory() || !file.exists()) {
 					continue;
 				}
 
