@@ -41,6 +41,8 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -66,6 +68,7 @@ public class SSLProxy implements Runnable {
     private final SSLServerSocket serverSocket;
     private final Packet packet;
 
+    private static Map<X509Certificate, SSLContext> proxyCertMap = new ConcurrentHashMap<>();
     private X509Certificate peerCertificate;
 
     SSLProxy(VpnService vpnService, X509Certificate rootCert, PrivateKey privateKey, Packet packet) throws IOException, InterruptedException, NoSuchAlgorithmException, CertificateException, OperatorCreationException, NoSuchProviderException, SignatureException, InvalidKeyException, KeyStoreException, UnrecoverableKeyException, KeyManagementException {
@@ -93,25 +96,30 @@ public class SSLProxy implements Runnable {
         socket.startHandshake();
         countDownLatch.await();
 
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "SC");
-        keyPairGenerator.initialize(0x400, new SecureRandom());
-        KeyPair keyPair = keyPairGenerator.generateKeyPair();
-        PublicKey publicKey = keyPair.getPublic();
-        X509Certificate certificate = this.generateV3Certificate(publicKey, peerCertificate, rootCert, privateKey);
-        certificate.checkValidity(new Date());
-        certificate.verify(rootCert.getPublicKey());
+        SSLContext sslContext = proxyCertMap.get(peerCertificate);
+        if (sslContext == null) {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "SC");
+            keyPairGenerator.initialize(0x400, new SecureRandom());
+            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+            PublicKey publicKey = keyPair.getPublic();
+            X509Certificate certificate = this.generateV3Certificate(publicKey, peerCertificate, rootCert, privateKey);
+            Log.d(ServiceSinkhole.TAG, "generateV3Certificate certificate=" + certificate);
+            certificate.checkValidity(new Date());
+            certificate.verify(rootCert.getPublicKey());
 
-        char[] password = "keypass".toCharArray();
-        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        keyStore.load(null, password);
-        keyStore.setKeyEntry("alias", keyPair.getPrivate(), password, new Certificate[]{certificate});
+            char[] password = "keypass".toCharArray();
+            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keyStore.load(null, password);
+            keyStore.setKeyEntry("alias", keyPair.getPrivate(), password, new Certificate[]{certificate});
 
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keyStore, password);
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, password);
 
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
-        sslContext.getServerSessionContext().setSessionTimeout(10);
+            sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+            sslContext.getServerSessionContext().setSessionTimeout(10);
+            proxyCertMap.put(peerCertificate, sslContext);
+        }
 
         SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
         serverSocket = (SSLServerSocket) factory.createServerSocket(0);
@@ -188,7 +196,7 @@ public class SSLProxy implements Runnable {
             new StreamForward(local.getInputStream(), socket.getOutputStream(), local);
             new StreamForward(socket.getInputStream(), local.getOutputStream(), socket);
         } catch (IOException e) {
-            Log.d(ServiceSinkhole.TAG, "accept failed", e);
+            Log.d(ServiceSinkhole.TAG, "accept failed: " + packet, e);
         } finally {
             IOUtils.closeQuietly(serverSocket);
         }
