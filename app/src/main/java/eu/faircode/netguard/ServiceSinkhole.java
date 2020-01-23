@@ -530,8 +530,6 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         }
     }
 
-    private static final String KEY_STORE_PASS = "850128";
-
     private X509Certificate rootCert;
     private PrivateKey privateKey;
 
@@ -558,7 +556,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         try {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             try (InputStream inputStream = getAssets().open("charles-ssl-proxying.p12")) {
-                keyStore.load(inputStream, KEY_STORE_PASS.toCharArray());
+                keyStore.load(inputStream, "charles".toCharArray());
             }
             rootCert = (X509Certificate) keyStore.getCertificate("charles");
             privateKey = (PrivateKey) keyStore.getKey("charles", null);
