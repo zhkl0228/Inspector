@@ -1,5 +1,6 @@
 package com.fuzhu8.inspector;
 
+import android.app.Application;
 import android.content.pm.ApplicationInfo;
 
 import com.fuzhu8.inspector.advisor.Hooker;
@@ -43,4 +44,8 @@ public interface ModuleContext {
     RootUtil createRootUtil(int watchdogTimeout, LineListener lineListener);
 
     Hooker getHooker();
+
+    void onAttachApplication(Application application);
+    Application getApplication();
+
 }

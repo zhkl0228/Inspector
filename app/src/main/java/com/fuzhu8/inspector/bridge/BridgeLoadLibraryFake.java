@@ -3,7 +3,7 @@ package com.fuzhu8.inspector.bridge;
 import com.fuzhu8.inspector.LibraryAbi;
 import com.fuzhu8.inspector.LoadLibraryFake;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.MyModuleContext;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.advisor.AbstractHookHandler;
 
 import org.apache.commons.io.FilenameUtils;
@@ -59,7 +59,7 @@ public class BridgeLoadLibraryFake extends AbstractHookHandler implements LoadLi
 
 		File file = new File(libDir, libFile);
 		if(file.canExecute()) {
-			if(MyModuleContext.isDebug()) {
+			if(InspectorModuleContext.isDebug()) {
 				log("findLibrary: " + file);
 			}
 			return file.getAbsolutePath();
@@ -161,7 +161,7 @@ public class BridgeLoadLibraryFake extends AbstractHookHandler implements LoadLi
 				targetFile.setExecutable(true);
 			}
 
-			if(MyModuleContext.isDebug()) {
+			if(InspectorModuleContext.isDebug()) {
 				AndroidBridge.log("extractLibrary: " + targetFile);
 			}
 			return targetFile;

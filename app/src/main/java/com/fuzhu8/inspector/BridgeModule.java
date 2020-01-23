@@ -15,8 +15,6 @@ import com.fuzhu8.inspector.bridge.permissions.FakeParsePackageResult;
 import com.fuzhu8.inspector.module.AbstractModuleStarter;
 import com.fuzhu8.inspector.module.ModuleStarter;
 
-import org.apache.commons.io.FileUtils;
-
 import java.io.File;
 import java.util.Collections;
 
@@ -46,21 +44,9 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 
 	@SuppressLint("PrivateApi")
 	@Override
-	public void initZygote(StartupParam startupParam) throws Throwable {
+	public void initZygote(StartupParam startupParam) {
 		XSharedPreferences pref = new XSharedPreferences(BuildConfig.APPLICATION_ID);
 		modulePath = startupParam.modulePath;
-
-		switch (Build.VERSION.SDK_INT) {
-			case 25: // android 7.1.2
-				return;
-		}
-
-		try {
-			File tmp = new File(Environment.getExternalStorageDirectory(), "inspector");
-			FileUtils.deleteQuietly(tmp);
-		} catch (Throwable throwable) {
-			AndroidBridge.log(throwable);
-		}
 		
 		try {
 			if(!isEnabled(pref)) {
@@ -73,7 +59,7 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 				AndroidBridge.log("startRootUtilServer with port " + rootUtilServer.getPort() + " successfully!");
 			}
 			
-			packageFakerResult = new BridgePackageFaker(new MyModuleContext(BridgeModule.class.getClassLoader(), null,
+			packageFakerResult = new BridgePackageFaker(new InspectorModuleContext(BridgeModule.class.getClassLoader(), null,
 					new File(Environment.getDataDirectory(), "data/" + BuildConfig.APPLICATION_ID),
 					Environment.getDataDirectory().getAbsolutePath(),
 					null, modulePath, rootUtilServer, new BridgeHooker(), AbstractModuleStarter.createSdk()),
@@ -91,42 +77,6 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 			} else {
 				AndroidBridge.log("initZygote XposedPackagePermissions failed: " + Build.VERSION.SDK_INT);
 			}
-
-			/*if (Build.VERSION.SDK_INT == 19) {
-				*//*Class<?> SELinux = Class.forName("android.os.SELinux");
-				XposedHelpers.callStaticMethod(SELinux, "setSELinuxEnforce", false);*//*
-
-				Class<?> Zygote = Class.forName("dalvik.system.Zygote");
-				// int forkAndSpecialize(int uid, int gid, int[] gids, int debugFlags, int[][] rlimits, int mountExternal, String seInfo, String niceName, int[] unknown)
-				XposedHelpers.findAndHookMethod(Zygote, "forkAndSpecialize", int.class, int.class, int[].class, int.class, int[][].class, int.class, String.class, String.class, int[].class, new XC_MethodHook() {
-					@Override
-					protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-						super.beforeHookedMethod(param);
-
-						Integer uid = (Integer) param.args[0];
-						Integer gid = (Integer) param.args[1];
-						int[] gids = (int[]) param.args[2];
-						Integer debugFlags = (Integer) param.args[3];
-						Integer mountExternal = (Integer) param.args[5];
-						String seInfo = (String) param.args[6];
-						String niceName = (String) param.args[7];
-						XposedBridge.log("forkAndSpecialize uid=" + uid + ", gid=" + gid + ", gids=" + Arrays.toString(gids) + ", debugFlags=" + debugFlags + ", mountExternal=" + mountExternal + ", seInfo=" + seInfo + ", niceName=" + niceName + ", myUid=" + Process.myUid() + ", myPid=" + Process.myPid());
-					}
-				});
-				// int forkSystemServer(int uid, int gid, int[] gids, int debugFlags, int[][] rlimits, long permittedCapabilities, long effectiveCapabilities)
-				XposedHelpers.findAndHookMethod(Zygote, "forkSystemServer", int.class, int.class, int[].class, int.class, int[][].class, long.class, long.class, new XC_MethodHook() {
-					@Override
-					protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-						super.afterHookedMethod(param);
-
-						Integer uid = (Integer) param.args[0];
-						Integer gid = (Integer) param.args[1];
-						int[] gids = (int[]) param.args[2];
-						Integer debugFlags = (Integer) param.args[3];
-						XposedBridge.log("forkSystemServer uid=" + uid + ", gid=" + gid + ", gids=" + Arrays.toString(gids) + ", debugFlags=" + debugFlags + ", myUid=" + Process.myUid() + ", myPid=" + Process.myPid() + ", ret=" + param.getResult());
-					}
-				});
-			}*/
 		} catch(Throwable t) {
 			AndroidBridge.log(t);
 		}
@@ -137,7 +87,7 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 	 */
 	@SuppressLint("PrivateApi")
 	@Override
-	public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+	public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) {
 		if(lpparam.isFirstApplication && lpparam.classLoader != null && packageFakerResult != null) {
 			Class<?> packageManagerServiceClass = null;
 			try {
@@ -160,7 +110,7 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 		if ("com.android.vpndialogs".equals(lpparam.packageName)) {
 			XposedHelpers.findAndHookMethod("com.android.vpndialogs.ConfirmDialog", lpparam.classLoader, "onResume", new XC_MethodHook() {
 				@Override
-				protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+				protected void afterHookedMethod(MethodHookParam param) {
 					try {
 						Object mService = XposedHelpers.getObjectField(param.thisObject, "mService");
 
@@ -211,8 +161,6 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 	}
 
 	private boolean canInspect(XC_LoadPackage.LoadPackageParam lpparam, XSharedPreferences pref) {
-		// XposedBridge.log("canInspect packageName=" + lpparam.packageName + ", processName=" + lpparam.processName + ", appInfo=" + lpparam.appInfo + ", systemApp=" + pref.getBoolean("pref_system_app", false));
-
 		if(lpparam.appInfo == null) {
 			return false;
 		}
@@ -228,29 +176,5 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 
 		return !BuildConfig.APPLICATION_ID.equals(lpparam.packageName); // 禁止hook自身
 	}
-
-	/*private void hookSystemServer() {
-		XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
-			@Override
-			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-				super.afterHookedMethod(param);
-
-				setApplication(Application.class.cast(param.thisObject));
-			}
-		});
-	}
-
-	private KrakenCapture systemServer;
-
-	private void setApplication(Application application) {
-		if(systemServer != null || application == null) {
-			return;
-		}
-
-		systemServer = new KrakenCapture(application);
-		Thread thread = new Thread(systemServer, systemServer.getClass().getSimpleName());
-		thread.setDaemon(true);
-		thread.start();
-	}*/
 
 }

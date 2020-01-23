@@ -6,7 +6,6 @@ import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.MyModuleContext;
 
 /**
  * @author zhkl0228

@@ -30,12 +30,20 @@ import com.fuzhu8.inspector.vpn.InspectVpnService;
 import com.fuzhu8.tcpcap.PcapDLT;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -69,12 +77,10 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         @Override
         public void handleMessage(Message msg) {
             try {
-                switch (msg.what) {
-                    case MSG_SERVICE_INTENT:
-                        handleIntent((Intent) msg.obj);
-                        break;
-                    default:
-                        Log.e(TAG, "Unknown command message=" + msg.what);
+                if (msg.what == MSG_SERVICE_INTENT) {
+                    handleIntent((Intent) msg.obj);
+                } else {
+                    Log.e(TAG, "Unknown command message=" + msg.what);
                 }
             } catch (Throwable ex) {
                 Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
@@ -153,7 +159,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             Log.i(TAG, "Legacy restart");
 
             if (vpn != null) {
-                stopNative(vpn, false);
+                stopNative(false);
                 stopVPN(vpn);
                 vpn = null;
                 try {
@@ -172,7 +178,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
         private void stop() {
             if (vpn != null) {
-                stopNative(vpn, true);
+                stopNative(true);
                 stopVPN(vpn);
                 vpn = null;
             }
@@ -297,7 +303,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         System.loadLibrary("netguard");
     }
 
-    private static final String TAG = "ServiceSinkhole";
+    static final String TAG = "ServiceSinkhole";
 
     private final BroadcastReceiver broadcastReceiver;
 
@@ -465,7 +471,8 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
     private void startNative(final ParcelFileDescriptor vpn) {
         if (tunnelThread == null) {
-            @SuppressLint("WorldReadableFiles") SharedPreferences pref = this.getSharedPreferences(BuildConfig.APPLICATION_ID + "_preferences", Context.MODE_WORLD_READABLE);
+            @SuppressLint("WorldReadableFiles")
+            SharedPreferences pref = this.getSharedPreferences(BuildConfig.APPLICATION_ID + "_preferences", Context.MODE_PRIVATE);
             boolean debug = this.debug || pref.getBoolean("pref_vpn_debug", false);
             Log.i(TAG, "Starting tunnel thread, debug=" + debug + ", context=0x" + Long.toHexString(jni_context) + ", obj=" + this + ", socksServer=" + socksServer + ", socksPort=" + socksPort);
 
@@ -490,7 +497,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         }
     }
 
-    private void stopNative(ParcelFileDescriptor vpn, boolean clear) {
+    private void stopNative(boolean clear) {
         Log.i(TAG, "Stop native clear=" + clear);
 
         if (tunnelThread != null) {
@@ -499,10 +506,9 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             jni_stop(jni_context);
 
             Thread thread = tunnelThread;
-            while (thread != null) {
+            if (thread != null) {
                 try {
                     thread.join();
-                    break;
                 } catch (InterruptedException ignored) {
                 }
             }
@@ -524,6 +530,11 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         }
     }
 
+    private static final String KEY_STORE_PASS = "850128";
+
+    private X509Certificate rootCert;
+    private PrivateKey privateKey;
+
     @Override
     public void onCreate() {
         jni_context = jni_init(Build.VERSION.SDK_INT);
@@ -543,6 +554,17 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         filter.addAction(InspectorBroadcastListener.ACTIVITY_RESUME);
         filter.addAction(InspectorBroadcastListener.REQUEST_STOP_VPN);
         registerReceiver(broadcastReceiver, filter);
+
+        try {
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            try (InputStream inputStream = getAssets().open("charles-ssl-proxying.p12")) {
+                keyStore.load(inputStream, KEY_STORE_PASS.toCharArray());
+            }
+            rootCert = (X509Certificate) keyStore.getCertificate("charles");
+            privateKey = (PrivateKey) keyStore.getKey("charles", null);
+        } catch (IOException | CertificateException | NoSuchAlgorithmException | UnrecoverableKeyException | KeyStoreException e) {
+            Log.i(TAG, "initialize ssl context failed", e);
+        }
     }
 
     private IPacketCapture packetCapture;
@@ -612,7 +634,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
         try {
             if (vpn != null) {
-                stopNative(vpn, true);
+                stopNative(true);
                 stopVPN(vpn);
                 vpn = null;
             }
@@ -714,6 +736,11 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                     }
                 }
             }
+
+            if (packet.protocol == 6 && packet.uid == uid) {
+                allowed = mitm(packet);
+            }
+
             if (allowed == null) {
                 allowed = new Allowed();
             }
@@ -725,7 +752,20 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             }
         }
 
+        Log.d(TAG, "isAddressAllowed allowed=" + allowed + ", packet: " + packet);
+
         return allowed;
+    }
+
+    private Allowed mitm(Packet packet) {
+        if (packet.isSSL()) {
+            try {
+                return new SSLProxy(this, rootCert, privateKey, packet).startProxy();
+            } catch (Exception e) {
+                Log.d(TAG, "mitm failed: packet=" + packet, e);
+            }
+        }
+        return null;
     }
 
     // Called from native code

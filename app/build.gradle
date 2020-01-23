@@ -20,7 +20,7 @@ android {
         targetSdkVersion 25
         versionCode 260
         versionName "2.6.0"
-        multiDexEnabled false
+        multiDexEnabled true
 
         ndk {
             abiFilters 'armeabi', 'x86', 'arm64-v8a'
@@ -80,6 +80,10 @@ dependencies {
 
     //noinspection GradleDependency
     compile 'com.lahm.library:easy-protector-release:1.1.0'
+
+    compile 'com.madgag.spongycastle:core:1.54.0.0'
+    compile 'com.madgag.spongycastle:prov:1.54.0.0'
+    compile 'com.madgag.spongycastle:pkix:1.54.0.0'
 
     provided 'de.robv.android.xposed:XposedBridgeApi:60'
     provided 'android:full_framework:15'

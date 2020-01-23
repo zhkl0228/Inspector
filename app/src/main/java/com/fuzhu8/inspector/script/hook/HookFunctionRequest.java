@@ -220,11 +220,7 @@ public abstract class HookFunctionRequest<T> {
 		buffer.append(clazz.getName());
 		buffer.append('[');
 		Class<?> thisClass = thisObject == null ? null : thisObject.getClass();
-		if (thisClass != null) {
-			buffer.append(thisClass.getName()).append("@").append(Integer.toHexString(thisObject.hashCode()));
-		} else {
-			buffer.append(thisObject);
-		}
+		appendObject(buffer, thisObject, thisClass);
 		buffer.append(']');
 		buffer.append("->");
 		buffer.append(method.getName());
@@ -298,23 +294,26 @@ public abstract class HookFunctionRequest<T> {
 		if (obj == null) {
 			buffer.append((Object) null);
 		} else {
-			boolean isStr = obj instanceof CharSequence;
-			if(isStr) {
-				buffer.append('"');
-			}
-
-			Class<?> clazz = obj.getClass();
-			if (isStr || clazz.isEnum() || clazz.isPrimitive() || clazz.getName().startsWith("java")) {
-				buffer.append(obj);
-			} else {
-				buffer.append(clazz.getName()).append("@").append(Integer.toHexString(obj.hashCode()));
-			}
-
-			if(isStr) {
-				buffer.append('"');
-			}
+			appendObject(buffer, obj, obj.getClass());
 		}
 		buffer.append(", ");
+	}
+
+	private static void appendObject(StringBuffer buffer, Object obj, Class<?> clazz) {
+		boolean isStr = obj instanceof CharSequence;
+		if(isStr) {
+			buffer.append('"');
+		}
+
+		if (clazz == null | isStr || clazz.isEnum() || clazz.isPrimitive() || clazz.getName().startsWith("java")) {
+			buffer.append(obj);
+		} else {
+			buffer.append(clazz.getName()).append("@").append(Integer.toHexString(obj.hashCode()));
+		}
+
+		if(isStr) {
+			buffer.append('"');
+		}
 	}
 
 }

@@ -15,7 +15,7 @@ import org.apache.commons.io.IOUtils;
 import com.fuzhu8.inspector.LibraryAbi;
 import com.fuzhu8.inspector.LoadLibraryFake;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.MyModuleContext;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.advisor.AbstractHookHandler;
 
 import de.robv.android.xposed.XposedBridge;
@@ -59,7 +59,7 @@ public class XposedLoadLibraryFake extends AbstractHookHandler implements LoadLi
 
 		File file = new File(libDir, libFile);
 		if(file.canExecute()) {
-			if(MyModuleContext.isDebug()) {
+			if(InspectorModuleContext.isDebug()) {
 				log("findLibrary: " + file);
 			}
 			return file.getAbsolutePath();
@@ -161,7 +161,7 @@ public class XposedLoadLibraryFake extends AbstractHookHandler implements LoadLi
 				targetFile.setExecutable(true);
 			}
 
-			if(MyModuleContext.isDebug()) {
+			if(InspectorModuleContext.isDebug()) {
 				XposedBridge.log("extractLibrary: " + targetFile);
 			}
 			return targetFile;

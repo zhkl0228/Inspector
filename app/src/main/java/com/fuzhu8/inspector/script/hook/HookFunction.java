@@ -1,5 +1,7 @@
 package com.fuzhu8.inspector.script.hook;
 
+import android.app.Application;
+
 import com.fuzhu8.inspector.Inspector;
 import com.fuzhu8.inspector.ModuleContext;
 import com.fuzhu8.inspector.dex.ClassLoaderListener;
@@ -7,7 +9,6 @@ import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.dex.provider.DexFileProvider;
 import com.fuzhu8.inspector.script.InspectorFunction;
 
-import org.keplerproject.luajava.LuaException;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
 
@@ -34,11 +35,8 @@ public abstract class HookFunction extends InspectorFunction implements ClassLoa
 		this.context = context;
 	}
 
-	/* (non-Javadoc)
-	 * @see org.keplerproject.luajava.JavaFunction#execute()
-	 */
 	@Override
-	public final int execute() throws LuaException {
+	public final int execute() {
 		int count = L.getTop();
 		if(count >= 3) {
 			String clazz = getParam(2).getString();
@@ -86,8 +84,19 @@ public abstract class HookFunction extends InspectorFunction implements ClassLoa
 			}
 		}
 
+		Application application;
 		if (successfully) {
 			exceptions.clear();
+		} else if((application = context.getApplication()) != null) {
+			try {
+				if (request.tryHook(application.getClassLoader(), inspector, dexFileManager, hookedSet)) {
+					inspector.println("hook from context classloader " + application.getClassLoader());
+				}
+			} catch(ClassNotFoundException e) {
+				exceptions.add(e);
+			} catch(Exception t) {
+				log(t);
+			}
 		}
 		
 		if(!exceptions.isEmpty()) {

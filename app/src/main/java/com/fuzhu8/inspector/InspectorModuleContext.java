@@ -1,5 +1,6 @@
 package com.fuzhu8.inspector;
 
+import android.app.Application;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
 import android.os.Environment;
@@ -42,7 +43,7 @@ import dalvik.system.PathClassLoader;
  * @author zhkl0228
  *
  */
-public class MyModuleContext implements FileFilter, ModuleContext {
+public class InspectorModuleContext implements FileFilter, ModuleContext {
 	
 	private static boolean debug;
 	public static void setDebug() {
@@ -62,9 +63,9 @@ public class MyModuleContext implements FileFilter, ModuleContext {
 	private final Sdk sdk;
 	private final RootUtilServer rootUtilServer;
 	
-	public MyModuleContext(ClassLoader classLoader, String processName, File moduleDataDir, String dataDir,
-						   ApplicationInfo appInfo, String modulePath, RootUtilServer rootUtilServer,
-						   Hooker hooker, Sdk sdk) {
+	public InspectorModuleContext(ClassLoader classLoader, String processName, File moduleDataDir, String dataDir,
+								  ApplicationInfo appInfo, String modulePath, RootUtilServer rootUtilServer,
+								  Hooker hooker, Sdk sdk) {
 		super();
 		this.classLoader = classLoader;
 		this.processName = processName;
@@ -268,4 +269,15 @@ public class MyModuleContext implements FileFilter, ModuleContext {
 		return hooker;
 	}
 
+	private Application application;
+
+	@Override
+	public void onAttachApplication(Application application) {
+		this.application = application;
+	}
+
+	@Override
+	public Application getApplication() {
+		return application;
+	}
 }

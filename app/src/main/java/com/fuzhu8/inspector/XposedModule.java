@@ -73,7 +73,7 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 				XposedBridge.log("startRootUtilServer with port " + rootUtilServer.getPort() + " successfully!");
 			}
 			
-			packageFakerResult = new XposedPackageFaker(new MyModuleContext(XposedModule.class.getClassLoader(), null,
+			packageFakerResult = new XposedPackageFaker(new InspectorModuleContext(XposedModule.class.getClassLoader(), null,
 					new File(Environment.getDataDirectory(), "data/" + BuildConfig.APPLICATION_ID),
 					Environment.getDataDirectory().getAbsolutePath(),
 					null, modulePath, rootUtilServer, new XposedHooker(), AbstractModuleStarter.createSdk()),

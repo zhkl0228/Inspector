@@ -37,6 +37,10 @@ public class Packet {
         super();
     }
 
+    final boolean isSSL() {
+        return dport == 443 || dport == 8443;
+    }
+
     @Override
     public String toString() {
         return "uid=" + uid + " v" + version + " p" + protocol + " " + daddr + "/" + dport;

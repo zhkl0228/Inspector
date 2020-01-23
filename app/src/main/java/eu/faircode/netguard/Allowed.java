@@ -34,4 +34,11 @@ public class Allowed {
         this.rport = rport;
     }
 
+    @Override
+    public String toString() {
+        return "Allowed{" +
+                "raddr='" + raddr + '\'' +
+                ", rport=" + rport +
+                '}';
+    }
 }

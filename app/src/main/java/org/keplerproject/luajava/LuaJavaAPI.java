@@ -167,7 +167,7 @@ public final class LuaJavaAPI
 	    }
   }
 
-	private static Method findMethod(Class clazz, String methodName, LuaState L, int top, boolean isXC_invoked, Object[] objs, Object obj, boolean staticOnley) {
+	private static Method findMethod(Class clazz, String methodName, LuaState L, int top, boolean isXC_invoked, Object[] objs, Object obj, boolean staticOnly) {
 		if(clazz == null) {
 			return null;
 		}
@@ -185,7 +185,7 @@ public final class LuaJavaAPI
 		}
 
 	      // gets method and arguments
-	      for (Method m : (staticOnley ? staticMethods : instanceMethods))
+	      for (Method m : (staticOnly ? staticMethods : instanceMethods))
 	      {
 	    	  boolean matchesName = m.getName().equals(methodName);
 	    	  if(!matchesName && methodName.length() == 32 && MethodHashUtils.hashMethod(m).equals(methodName)) {
@@ -243,7 +243,7 @@ public final class LuaJavaAPI
 	          }
 	          catch (Exception e)
 	          {
-	            	Log.d(LuaJavaAPI.class.getSimpleName(), e.getMessage(), e);
+	            	Log.d(LuaJavaAPI.class.getSimpleName(), "clazz=" + clazz + ", methodName=" + methodName + ", obj=" + obj, e);
 	            okMethod = false;
 	            break;
 	          }
@@ -261,7 +261,7 @@ public final class LuaJavaAPI
 	    	  return method;
 	      }
 	      
-	      return findMethod(clazz.getSuperclass(), methodName, L, top, isXC_invoked, objs, obj, staticOnley);
+	      return findMethod(clazz.getSuperclass(), methodName, L, top, isXC_invoked, objs, obj, staticOnly);
 	}
 
   private static boolean isXC_invoked(Class<?> clazz, String methodName) {

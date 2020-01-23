@@ -34,7 +34,7 @@ public class TCPDispatcher extends AbstractSelectionKeyProcessor implements Sele
 
     private int clientSeq, serverSeq;
 
-    public TCPDispatcher(VpnProcessor vpnProcessor, TcpSession session, TcpSegment sync) {
+    TCPDispatcher(VpnProcessor vpnProcessor, TcpSession session, TcpSegment sync) {
         super(vpnProcessor);
 
         this.sessionKey = session.getKey();
@@ -162,7 +162,7 @@ public class TCPDispatcher extends AbstractSelectionKeyProcessor implements Sele
         final TcpSegment fin;
         final boolean forward;
         final long time;
-        public Fin(TcpSegment fin, boolean forward) {
+        Fin(TcpSegment fin, boolean forward) {
             this.fin = fin;
             this.forward = forward;
             time = System.nanoTime();
@@ -205,7 +205,7 @@ public class TCPDispatcher extends AbstractSelectionKeyProcessor implements Sele
     }
 
     @Override
-    public void checkRegisteredKey(SelectionKey key, long currentTimeMillis) throws IOException, VpnException {
+    public void checkRegisteredKey(SelectionKey key, long currentTimeMillis) throws VpnException {
         if (reset) {
             exceptionRaised(key, new IOException("Reset"));
             return;
@@ -222,7 +222,6 @@ public class TCPDispatcher extends AbstractSelectionKeyProcessor implements Sele
 
         if (toServerFin != null) {
             exceptionRaised(key, new EOFException("FIN"));
-            return;
         }
     }
 
@@ -233,11 +232,11 @@ public class TCPDispatcher extends AbstractSelectionKeyProcessor implements Sele
     }
 
     @Override
-    public void exceptionRaised(SelectionKey key, IOException exception) throws IOException, VpnException {
+    public void exceptionRaised(SelectionKey key, IOException exception) throws VpnException {
         key.cancel();
         IOUtils.closeQuietly(key.channel());
 
-        if (EOFException.class.isInstance(exception)) { // EOF
+        if (exception instanceof EOFException) { // EOF
             Log.d(getClass().getSimpleName(), "exceptionRaised EOF sessionKey=" + sessionKey);
 
             if (toClientFin == null) {

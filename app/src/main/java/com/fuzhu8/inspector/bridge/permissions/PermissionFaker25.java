@@ -1,4 +1,4 @@
-package com.fuzhu8.inspector.xposed.permissions;
+package com.fuzhu8.inspector.bridge.permissions;
 
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageParser;
@@ -12,19 +12,19 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XSharedPreferences;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
+import cn.android.bridge.AndroidBridge;
+import cn.android.bridge.XC_MethodHook;
+import cn.android.bridge.XSharedPreferences;
+import cn.android.bridge.XposedHelpers;
 
 /**
  * @author zhkl0228
  *
  */
-public class PermissionFaker21 extends PermissionFaker {
+public class PermissionFaker25 extends PermissionFaker {
 
-	PermissionFaker21(ModuleContext context, XSharedPreferences pref,
-					  List<String> permissionsAdd) {
+	PermissionFaker25(ModuleContext context, XSharedPreferences pref,
+                      List<String> permissionsAdd) {
 		super(context, pref, permissionsAdd);
 	}
 
@@ -86,10 +86,7 @@ public class PermissionFaker21 extends PermissionFaker {
 				
 				try {
 					@SuppressWarnings("unchecked")
-					List<Object> requestedPermissionsRequired = (List<Object>) XposedHelpers.getObjectField(pkg, "requestedPermissionsRequired");
-
 					List<String> requestedPermissions = new ArrayList<>(pkg.requestedPermissions);
-					List<Object> permissionsRequiredList = new ArrayList<>(requestedPermissionsRequired);
 					List<String> addList = new ArrayList<>();
 					
 					for(String perm : permissionsAdd) {
@@ -98,7 +95,6 @@ public class PermissionFaker21 extends PermissionFaker {
 						}
 						
 						requestedPermissions.add(perm);
-						permissionsRequiredList.add(Boolean.TRUE);
 						addList.add(perm);
 					}
 					
@@ -107,16 +103,14 @@ public class PermissionFaker21 extends PermissionFaker {
 					}
 
 					param.setObjectExtra("orig_requested_permissions", pkg.requestedPermissions);
-					param.setObjectExtra("orig_requested_permissions_required", requestedPermissionsRequired);
 					
 					XposedHelpers.setObjectField(pkg, "requestedPermissions", requestedPermissions);
-					XposedHelpers.setObjectField(pkg, "requestedPermissionsRequired", permissionsRequiredList);
 
 					if(pref.getBoolean("pref_debug", false)) {
 						log("grantPermissionsLPw pkg=" + pkg + ", permissions=" + addList);
 					}
 				} catch(Throwable e) {
-					XposedBridge.log(e);
+					AndroidBridge.log(e);
 				}
 			}
 			@Override
@@ -128,12 +122,8 @@ public class PermissionFaker21 extends PermissionFaker {
 				if(requestedPermissions != null) {
 					XposedHelpers.setObjectField(param.args[0], "requestedPermissions", requestedPermissions);
 				}
-				Object requestedPermissionsRequired = param.getObjectExtra("orig_requested_permissions_required");
-				if(requestedPermissionsRequired != null) {
-					XposedHelpers.setObjectField(param.args[0], "requestedPermissionsRequired", requestedPermissionsRequired);
-				}
 			}
 		});
-	}
+    }
 
 }

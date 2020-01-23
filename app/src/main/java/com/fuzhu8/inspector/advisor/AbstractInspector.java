@@ -54,7 +54,7 @@ import com.fuzhu8.inspector.Hex;
 import com.fuzhu8.inspector.Inspector;
 import com.fuzhu8.inspector.LibraryAbi;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.MyModuleContext;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.Unpacker;
 import com.fuzhu8.inspector.completer.DefaultServerCommandCompleter;
 import com.fuzhu8.inspector.completer.ServerCommandCompleter;
@@ -653,7 +653,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				localServerSocket = null;
 				initializeLogServer();
 			} catch (IOException e) {
-				if (MyModuleContext.isDebug()) {
+				if (InspectorModuleContext.isDebug()) {
 					super.log(e);
 				}
 				try {
@@ -2130,6 +2130,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		this.appContext = application;
 		log("set context: " + application);
 
+		this.context.onAttachApplication(application);
 		for (Plugin plugin : this.context.getPlugins()) {
 			plugin.onAttachApplication(application);
 		}
@@ -2443,7 +2444,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 	@Override
 	public boolean isDebug() {
-		return debug || MyModuleContext.isDebug();
+		return debug || InspectorModuleContext.isDebug();
 	}
 
 	@Override

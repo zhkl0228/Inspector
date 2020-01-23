@@ -2,6 +2,7 @@ package com.fuzhu8.inspector.bridge.permissions;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.os.Build;
 
 import com.fuzhu8.inspector.ModuleContext;
 
@@ -34,8 +35,12 @@ public class BridgePackageFaker implements FakeParsePackageResult {
 		this.pref = pref;
 		List<String> permissionsAdd = new ArrayList<>();
 		Collections.addAll(permissionsAdd, permissions);
-		
-		permissionFaker = null;
+
+		if(Build.VERSION.SDK_INT <= 25) {
+			permissionFaker = new PermissionFaker25(context, pref, permissionsAdd);
+		} else {
+			permissionFaker = null;
+		}
 	}
 	
 	public FakeParsePackageResult fakeParsePackage() {

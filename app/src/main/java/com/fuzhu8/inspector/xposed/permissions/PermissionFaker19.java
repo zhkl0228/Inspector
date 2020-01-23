@@ -10,7 +10,7 @@ import android.util.DisplayMetrics;
 
 import com.fuzhu8.inspector.BuildConfig;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.MyModuleContext;
+import com.fuzhu8.inspector.InspectorModuleContext;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -151,7 +151,7 @@ public class PermissionFaker19 extends PermissionFaker {
 		}
 		if(!BuildConfig.APPLICATION_ID.equals(ret.packageName)) {
 			ret.applicationInfo.flags |= ApplicationInfo.FLAG_DEBUGGABLE;
-			if (MyModuleContext.isDebug()) {
+			if (InspectorModuleContext.isDebug()) {
 				log("setDebuggable on " + ret.packageName + ", sourceFile=" + sourceFile + ", destCodePath=" + destCodePath + ", flags=" + flags);
 			}
 		}

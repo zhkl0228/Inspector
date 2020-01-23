@@ -7,7 +7,7 @@ import com.fuzhu8.inspector.DigestUtils;
 import com.fuzhu8.inspector.Inspector;
 import com.fuzhu8.inspector.Module;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.MyModuleContext;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.advisor.AbstractAdvisor;
 import com.fuzhu8.inspector.advisor.MethodHook;
 import com.fuzhu8.inspector.dex.provider.BootClassPathElement;
@@ -531,7 +531,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	}
 
 	private void PathClassLoader(Object thisObj, String path, String libPath, ClassLoader parent) {
-		if (MyModuleContext.isDebug()) {
+		if (InspectorModuleContext.isDebug()) {
 			log("PathClassLoader path=" + path + ", parent=" + parent);
 		}
 		PathClassLoader classLoader = PathClassLoader.class.cast(thisObj);
@@ -589,7 +589,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 
 	@SuppressWarnings("unused")
 	void DexClassLoader(Object thisObj, String dexPath, String dexOutputDir, String libPath, ClassLoader parent) {
-		if (MyModuleContext.isDebug()) {
+		if (InspectorModuleContext.isDebug()) {
 			log("DexClassLoader dexPath=" + dexPath + ", parent=" + parent);
 		}
 		DexClassLoader classLoader = DexClassLoader.class.cast(thisObj);
@@ -668,7 +668,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	
 	private long openDexFileNative(Class<?> thisObj, String sourceName, String outputName, int flags, long cookie) {
 		try {
-			if (MyModuleContext.isDebug()) {
+			if (InspectorModuleContext.isDebug()) {
 				log("openDexFileNative sourceName=" + sourceName + ", outputName=" + outputName + ", cookie=0x" + Long.toHexString(cookie).toUpperCase(Locale.CHINA));
 			}
 			File dataDir = context.getDataDir();
@@ -682,7 +682,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 				staticLoadedDex.add(dex);
 			}
 		} catch(Throwable t) {
-			if (MyModuleContext.isDebug()) {
+			if (InspectorModuleContext.isDebug()) {
 				log(t);
 			}
 		}
@@ -708,7 +708,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 				}
 			}
 		} catch(Throwable t) {
-			if (MyModuleContext.isDebug()) {
+			if (InspectorModuleContext.isDebug()) {
 				log(t);
 			} else {
 				Log.w("Inspector", t);
@@ -737,6 +737,20 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	@SuppressWarnings("unused")
 	Class<?> defineClass(Object thisObj, String name, ClassLoader loader, int cookie, Class<?> clazz) {
 		return defineClassNative(thisObj, name, loader, cookie, clazz);
+	}
+
+	@SuppressWarnings("unused")
+	Class<?> defineClass(Object thisObj, String name, ClassLoader loader, Object cookie, dalvik.system.DexFile dexFile, List<Throwable> suppressed, Class<?> clazz) {
+		return defineClassNative(thisObj, name, loader, cookie, dexFile, clazz);
+	}
+
+	private Class<?> defineClassNative(Object thisObj, String name, ClassLoader loader, Object cookie, dalvik.system.DexFile dexFile, Class<?> clazz) {
+		if (loader != null && clazz != null) {
+			for (Plugin plugin : context.getPlugins()) {
+				plugin.defineClass(loader, clazz);
+			}
+		}
+		return clazz;
 	}
 	
 	private Class<?> defineClassNative(Object thisObj, String name, final ClassLoader loader, final long cookie, Class<?> clazz) {

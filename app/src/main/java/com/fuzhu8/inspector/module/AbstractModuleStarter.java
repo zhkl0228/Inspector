@@ -9,7 +9,7 @@ import android.os.Process;
 import com.fuzhu8.inspector.Inspector;
 import com.fuzhu8.inspector.LoadLibraryFake;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.MyModuleContext;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.advisor.Hooker;
 import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.jni.Feature;
@@ -67,7 +67,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 		final Hooker hooker = createHooker();
 		ClassLoader myLoader = AbstractModuleStarter.class.getClassLoader();
 		ClassLoader moduleClassLoader = new ModuleClassLoader(myLoader, classLoader);
-		final ModuleContext context = new MyModuleContext(moduleClassLoader,
+		final ModuleContext context = new InspectorModuleContext(moduleClassLoader,
 				processName,
 				moduleDataDir,
 				appInfo.dataDir,
@@ -83,7 +83,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 			throw new IllegalStateException();
 		}
 		Native.getLastError();//初始化JNA
-		Thread thread = new Thread(inspector);
+		Thread thread = new Thread(inspector, inspector.getClass().getSimpleName());
 		thread.start();
 
 		scriptManager.setInspector(inspector);
@@ -103,7 +103,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 		}
 
 		if(debug) {
-			MyModuleContext.setDebug();
+			InspectorModuleContext.setDebug();
 		}
 		
 		if(Feature.supportDvm() && trace_anti) {
