@@ -52,9 +52,9 @@ import com.fuzhu8.inspector.BuildConfig;
 import com.fuzhu8.inspector.ClientConnectListener;
 import com.fuzhu8.inspector.Hex;
 import com.fuzhu8.inspector.Inspector;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.LibraryAbi;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.Unpacker;
 import com.fuzhu8.inspector.completer.DefaultServerCommandCompleter;
 import com.fuzhu8.inspector.completer.ServerCommandCompleter;
@@ -263,7 +263,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 		// inspector.addCommandHelp("inspector:setTcpRedirectRules", "inspector:setTcpRedirectRules(rules); -- Set tcp redirect rules over vpn, example: *:443->localhost:8888,*:8443->localhost:8888,120.35.*.*:8643->localhost:8888");
 
-		inspector.addCommandHelp("inspector:startVpn", "inspector:startVpn(socksServer or packageName); -- Request start vpn, socks server example: localhost:8889 or packageName");
+		inspector.addCommandHelp("inspector:startVpn()", "inspector:startVpn(packageName); -- Request start vpn, example: packageName");
 		inspector.addCommandHelp("inspector:stopVpn()", "inspector:stopVpn(); -- Request stop vpn");
 
 		inspector.addCommandHelp("inspector:startPcap()", "inspector:startPcap(); -- Request start pcap, require root");
@@ -304,7 +304,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		startVpn(null);
 	}
 
-	private void startVpn(String socksServer) {
+	private void startVpn(String packageName) {
 		Context context = getAppContext();
 		if (context == null) {
 			err_println("start vpn failed: context is null");
@@ -315,17 +315,17 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		PackageInfo packageInfo = null;
 		try {
-			if (socksServer != null) {
-				packageInfo = context.getPackageManager().getPackageInfo(socksServer, PackageManager.GET_META_DATA);
+			if (packageName != null) {
+				packageInfo = context.getPackageManager().getPackageInfo(packageName, PackageManager.GET_META_DATA);
 			}
 		} catch (NameNotFoundException ignored) {
 		}
 
 		String reason = "";
-		int index = socksServer == null || packageInfo != null ? -1 : socksServer.indexOf(':');
+		int index = packageName == null || packageInfo != null ? -1 : packageName.indexOf(':');
 		if (index != -1) {
-			String socksHost = socksServer.substring(0, index);
-			int socksPort = Integer.parseInt(socksServer.substring(index + 1));
+			String socksHost = packageName.substring(0, index);
+			int socksPort = Integer.parseInt(packageName.substring(index + 1));
 			intent.putExtra(InspectVpnService.SOCKS_HOST_KEY, socksHost);
 			intent.putExtra(InspectVpnService.SOCKS_PORT_KEY, socksPort);
 			reason = " with socks server: " + socksHost + ':' + socksPort;

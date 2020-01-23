@@ -735,7 +735,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                 }
             }
 
-            if (packet.protocol == 6 && packet.uid == uid) {
+            if (packet.protocol == 6 && packet.uid == uid && packet.isSSL()) {
                 allowed = mitm(packet);
             }
 
@@ -756,14 +756,12 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     }
 
     private Allowed mitm(Packet packet) {
-        if (packet.isSSL()) {
-            try {
-                return new SSLProxy(this, rootCert, privateKey, packet).startProxy();
-            } catch (Exception e) {
-                Log.d(TAG, "mitm failed: packet=" + packet, e);
-            }
+        try {
+            return new SSLProxy(this, rootCert, privateKey, packet).startProxy();
+        } catch (Exception e) {
+            Log.d(TAG, "mitm failed: packet=" + packet, e);
+            return null;
         }
-        return null;
     }
 
     // Called from native code

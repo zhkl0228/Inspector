@@ -1,5 +1,6 @@
 package eu.faircode.netguard;
 
+import android.annotation.SuppressLint;
 import android.net.VpnService;
 import android.util.Log;
 
@@ -21,6 +22,7 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.security.InvalidKeyException;
 import java.security.KeyManagementException;
 import java.security.KeyPair;
@@ -54,6 +56,8 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
 
 import cn.banny.auxiliary.Inspector;
@@ -63,6 +67,8 @@ public class SSLProxy implements Runnable {
     static {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(), 1);
     }
+
+    private static final int RECEIVE_BUFFER_SIZE = 0x2000;
 
     private final SSLSocket socket;
     private final SSLServerSocket serverSocket;
@@ -78,7 +84,25 @@ public class SSLProxy implements Runnable {
         app.bind(null);
         vpnService.protect(app);
         app.connect(new InetSocketAddress(packet.daddr, packet.dport), 5000);
-        socket = (SSLSocket) SSLContext.getDefault().getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
+        X509TrustManager trustManager = new X509TrustManager() {
+            @Override
+            public X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+            @SuppressLint("TrustAllX509TrustManager")
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain,
+                                           String authType) {
+            }
+            @SuppressLint("TrustAllX509TrustManager")
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain,
+                                           String authType) {
+            }
+        };
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(null, new TrustManager[] { trustManager }, new SecureRandom());
+        socket = (SSLSocket) context.getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         socket.addHandshakeCompletedListener(new HandshakeCompletedListener() {
             @Override
@@ -94,7 +118,10 @@ public class SSLProxy implements Runnable {
         });
         Log.d(ServiceSinkhole.TAG, "startHandshake socket=" + socket);
         socket.startHandshake();
-        countDownLatch.await();
+        countDownLatch.await(10, TimeUnit.SECONDS);
+        if (peerCertificate == null) {
+            throw new IllegalStateException("handshake failed");
+        }
 
         SSLContext sslContext = proxyCertMap.get(peerCertificate);
         if (sslContext == null) {
@@ -124,7 +151,7 @@ public class SSLProxy implements Runnable {
         SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
         serverSocket = (SSLServerSocket) factory.createServerSocket(0);
         serverSocket.setSoTimeout(10000);
-        serverSocket.setReceiveBufferSize(0x2000);
+        serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
     }
 
     private static final long ONE_YEAR_IN_MS = TimeUnit.DAYS.toMillis(365);
@@ -170,7 +197,7 @@ public class SSLProxy implements Runnable {
         }
         @Override
         public void run() {
-            byte[] buf = new byte[0x2000];
+            byte[] buf = new byte[RECEIVE_BUFFER_SIZE];
             int read;
             try {
                 while ((read = inputStream.read(buf)) != -1) {
@@ -189,14 +216,19 @@ public class SSLProxy implements Runnable {
 
     @Override
     public void run() {
-        final SSLSocket local;
+        SSLSocket local = null;
         try {
             local = (SSLSocket) serverSocket.accept();
 
             new StreamForward(local.getInputStream(), socket.getOutputStream(), local);
             new StreamForward(socket.getInputStream(), local.getOutputStream(), socket);
+        } catch(SocketTimeoutException e) {
+            IOUtils.closeQuietly(socket);
         } catch (IOException e) {
             Log.d(ServiceSinkhole.TAG, "accept failed: " + packet, e);
+
+            IOUtils.closeQuietly(socket);
+            IOUtils.closeQuietly(local);
         } finally {
             IOUtils.closeQuietly(serverSocket);
         }
