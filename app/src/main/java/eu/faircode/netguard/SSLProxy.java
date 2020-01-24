@@ -257,11 +257,15 @@ public class SSLProxy implements Runnable {
 
             InetSocketAddress client = (InetSocketAddress) local.getRemoteSocketAddress();
             InetSocketAddress server = (InetSocketAddress) socket.getRemoteSocketAddress();
-            new StreamForward(local.getInputStream(), socket.getOutputStream(), local, true, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
-            new StreamForward(socket.getInputStream(), local.getOutputStream(), socket, false, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
+            InputStream localIn = local.getInputStream();
+            OutputStream localOut = local.getOutputStream();
+            InputStream socketIn = socket.getInputStream();
+            OutputStream socketOut = socket.getOutputStream();
             if (packetCapture != null) {
                 packetCapture.onSSLProxyEstablish(client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
             }
+            new StreamForward(localIn, socketOut, local, true, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
+            new StreamForward(socketIn, localOut, socket, false, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
         } catch(SocketTimeoutException e) {
             IOUtils.closeQuietly(socket);
         } catch (IOException e) {
