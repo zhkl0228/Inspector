@@ -98,6 +98,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             try {
                 switch (cmd) {
                     case run:
+                    case stats:
                         break;
 
                     case start:
@@ -110,9 +111,6 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
                     case stop:
                         stop();
-                        break;
-
-                    case stats:
                         break;
 
                     case householding:
@@ -599,6 +597,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         Bundle bundle = intent.getBundleExtra(Bundle.class.getCanonicalName());
         packetCapture = bundle == null ? null : IPacketCapture.Stub.asInterface(bundle.getBinder(InspectVpnService.INSPECTOR_KEY));
         uid = bundle == null ? -1 : bundle.getInt(InspectVpnService.UID_KEY);
+        pid = bundle == null ? -1 : bundle.getInt(InspectorBroadcastReceiver.PID_KEY);
         debug = bundle != null && bundle.getBoolean(InspectVpnService.DEBUG_KEY);
         socksServer = bundle == null ? null : bundle.getString(InspectVpnService.SOCKS_HOST_KEY);
         socksPort = bundle == null ? 0 : bundle.getInt(InspectVpnService.SOCKS_PORT_KEY);
@@ -609,7 +608,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             intent.putExtra(EXTRA_COMMAND, Command.start);
         }
         String reason = intent.getStringExtra(EXTRA_REASON);
-        Log.i(TAG, "Start intent=" + intent + " command=" + cmd + " reason=" + reason + " vpn=" + (vpn != null) + " user=" + (Process.myUid() / 100000));
+        Log.i(TAG, "Start intent=" + intent + " command=" + cmd + " reason=" + reason + " vpn=" + (vpn != null) + " user=" + (Process.myUid() / 100000) + ", packetCapture=" + packetCapture + ", uid=" + uid + ", pid=" + pid + ", extraUid=" + extraUid);
 
         commandHandler.queue(intent);
         return START_STICKY;

@@ -333,6 +333,19 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			intent.putExtra(InspectVpnService.EXTRA_UID_KEY, packageInfo.applicationInfo.uid);
 			reason = " with filter app: " + packageInfo.packageName;
 		}
+
+		Bundle bundle = new Bundle();
+		bundle.putString(InspectVpnService.PACKAGE_NAME_KEY, context.getPackageName());
+		bundle.putInt(InspectVpnService.UID_KEY, context.getApplicationInfo().uid);
+		bundle.putBinder(InspectVpnService.INSPECTOR_KEY, packetCapture);
+		int pid = Process.myPid();
+		bundle.putInt(InspectorBroadcastReceiver.PID_KEY, pid);
+		String processName = getProcessNameByPid(context, pid);
+		if (processName != null) {
+			bundle.putString(InspectorBroadcastReceiver.PROCESS_NAME_KEY, processName);
+		}
+		intent.putExtra(Bundle.class.getCanonicalName(), bundle);
+
 		intent.setClassName(BuildConfig.APPLICATION_ID, StartVpnActivity.class.getName());
 		context.startActivity(intent);
 

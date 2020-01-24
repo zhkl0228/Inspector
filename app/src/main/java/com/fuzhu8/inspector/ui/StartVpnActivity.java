@@ -4,8 +4,10 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 
+import com.fuzhu8.inspector.content.InspectorBroadcastReceiver;
 import com.fuzhu8.inspector.vpn.InspectVpnService;
 
 import eu.faircode.netguard.ServiceSinkhole;
@@ -27,13 +29,18 @@ public class StartVpnActivity extends Activity {
             Intent intent = new Intent(this, ServiceSinkhole.class);
             Bundle bundle = new Bundle();
             bundle.putString(InspectVpnService.PACKAGE_NAME_KEY, this.getPackageName());
-            bundle.putInt(InspectVpnService.UID_KEY, -1);
+            bundle.putInt(InspectVpnService.UID_KEY, extraBundle == null ? -1 : extraBundle.getInt(InspectVpnService.UID_KEY));
             bundle.putBoolean(InspectVpnService.DEBUG_KEY, false);
             if (socksHost != null && socksPort != 0) {
                 bundle.putString(InspectVpnService.SOCKS_HOST_KEY, socksHost);
                 bundle.putInt(InspectVpnService.SOCKS_PORT_KEY, socksPort);
             }
             bundle.putInt(InspectVpnService.EXTRA_UID_KEY, extraUid);
+            IBinder binder = extraBundle == null ? null : extraBundle.getBinder(InspectVpnService.INSPECTOR_KEY);
+            if (binder != null) {
+                bundle.putBinder(InspectVpnService.INSPECTOR_KEY, binder);
+            }
+            bundle.putInt(InspectorBroadcastReceiver.PID_KEY, extraBundle == null ? -1 : extraBundle.getInt(InspectorBroadcastReceiver.PID_KEY));
             intent.putExtra(Bundle.class.getCanonicalName(), bundle);
             startService(intent);
         }
@@ -43,8 +50,8 @@ public class StartVpnActivity extends Activity {
 
     private String socksHost;
     private int socksPort;
-
     private int extraUid;
+    private Bundle extraBundle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +62,7 @@ public class StartVpnActivity extends Activity {
         socksHost = intent.getStringExtra(InspectVpnService.SOCKS_HOST_KEY);
         socksPort = intent.getIntExtra(InspectVpnService.SOCKS_PORT_KEY, 0);
         extraUid = intent.getIntExtra(InspectVpnService.EXTRA_UID_KEY, 0);
+        extraBundle = intent.getBundleExtra(Bundle.class.getCanonicalName());
 
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null) {
