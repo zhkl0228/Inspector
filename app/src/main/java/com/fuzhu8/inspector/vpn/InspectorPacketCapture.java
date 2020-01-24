@@ -1,7 +1,5 @@
 package com.fuzhu8.inspector.vpn;
 
-import android.os.RemoteException;
-
 import com.fuzhu8.inspector.Inspector;
 import com.fuzhu8.inspector.io.InputStreamCache;
 import com.fuzhu8.inspector.plugin.Plugin;
@@ -14,6 +12,9 @@ import com.fuzhu8.tcpcap.sniffer.KrakenPcapSniffer;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.krakenapps.pcap.decoder.tcp.TcpProcessor;
+import org.krakenapps.pcap.decoder.tcp.TcpSessionKey;
+import org.krakenapps.pcap.decoder.tcp.TcpSessionKeyImpl;
 import org.krakenapps.pcap.file.PcapFileOutputStream;
 import org.krakenapps.pcap.packet.PacketHeader;
 import org.krakenapps.pcap.packet.PcapPacket;
@@ -24,8 +25,12 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+
+import eu.faircode.netguard.ssl.SSLProxySession;
 
 /**
  * inspector packet capture
@@ -64,7 +69,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
     }
 
     @Override
-    public String getTcpRedirectRules() throws RemoteException {
+    public String getTcpRedirectRules() {
         this.tcpRedirectRulesUpdated = false;
 
         return tcpRedirectRules;
@@ -105,7 +110,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
     private boolean tcpRedirectRulesUpdated = true;
 
     @Override
-    public synchronized boolean onPacket(final byte[] packetData, String type, int datalink) throws RemoteException {
+    public synchronized boolean onPacket(final byte[] packetData, String type, int datalink) {
         if (lastDatalink != datalink) {
             try {
                 flushFile(datalink);
@@ -115,8 +120,8 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
         }
 
         if (queues != null) {
-            for (InspectorPcapInputStream pcap : queues) {
-                pcap.put(createPcapPacket(packetData, datalink));
+            for (PcapSniffer sniffer : queues) {
+                sniffer.pcap.put(createPcapPacket(packetData, datalink));
             }
         }
 
@@ -129,6 +134,82 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
             inspector.printStackTrace(e);
         }
         return tcpRedirectRulesUpdated;
+    }
+
+    @Override
+    public synchronized void onSSLProxyEstablish(String clientIp, String serverIp, int clientPort, int serverPort) {
+        try {
+            TcpSessionKey key = new TcpSessionKeyImpl(InetAddress.getByName(clientIp), InetAddress.getByName(serverIp), clientPort, serverPort);
+
+            if (queues != null) {
+                for (PcapSniffer sniffer : queues) {
+                    sniffer.tcpProcessor.onEstablish(new SSLProxySession(key));
+                }
+            }
+
+            if (inspector.isDebug()) {
+                inspector.println("onSSLProxyEstablish key=" + key);
+            }
+        } catch (UnknownHostException e) {
+            inspector.println(e);
+        }
+    }
+
+    @Override
+    public synchronized void onSSLProxyTX(String clientIp, String serverIp, int clientPort, int serverPort, byte[] data) {
+        try {
+            TcpSessionKey key = new TcpSessionKeyImpl(InetAddress.getByName(clientIp), InetAddress.getByName(serverIp), clientPort, serverPort);
+
+            if (queues != null) {
+                for (PcapSniffer sniffer : queues) {
+                    sniffer.tcpProcessor.handleTx(key, new ChainBuffer(data));
+                }
+            }
+
+            if (inspector.isDebug()) {
+                inspector.inspect(data, "onSSLProxyTX key=" + key);
+            }
+        } catch (UnknownHostException e) {
+            inspector.println(e);
+        }
+    }
+
+    @Override
+    public synchronized void onSSLProxyRX(String clientIp, String serverIp, int clientPort, int serverPort, byte[] data) {
+        try {
+            TcpSessionKey key = new TcpSessionKeyImpl(InetAddress.getByName(clientIp), InetAddress.getByName(serverIp), clientPort, serverPort);
+
+            if (queues != null) {
+                for (PcapSniffer sniffer : queues) {
+                    sniffer.tcpProcessor.handleRx(key, new ChainBuffer(data));
+                }
+            }
+
+            if (inspector.isDebug()) {
+                inspector.inspect(data, "onSSLProxyRX key=" + key);
+            }
+        } catch (UnknownHostException e) {
+            inspector.println(e);
+        }
+    }
+
+    @Override
+    public synchronized void onSSLProxyFinish(String clientIp, String serverIp, int clientPort, int serverPort) {
+        try {
+            TcpSessionKey key = new TcpSessionKeyImpl(InetAddress.getByName(clientIp), InetAddress.getByName(serverIp), clientPort, serverPort);
+
+            if (queues != null) {
+                for (PcapSniffer sniffer : queues) {
+                    sniffer.tcpProcessor.onFinish(key);
+                }
+            }
+
+            if (inspector.isDebug()) {
+                inspector.println("onSSLProxyFinish key=" + key);
+            }
+        } catch (UnknownHostException e) {
+            inspector.println(e);
+        }
     }
 
     public synchronized void flush() throws IOException {
@@ -146,7 +227,16 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
         }
     }
 
-    private List<InspectorPcapInputStream> queues;
+    private static class PcapSniffer {
+        final InspectorPcapInputStream pcap;
+        final TcpProcessor tcpProcessor;
+        PcapSniffer(InspectorPcapInputStream pcap, TcpProcessor tcpProcessor) {
+            this.pcap = pcap;
+            this.tcpProcessor = tcpProcessor;
+        }
+    }
+
+    private List<PcapSniffer> queues;
 
     public synchronized void checkSniffer(List<Plugin> plugins) {
         if (queues != null) {
@@ -160,7 +250,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
             sniffer.setExceptionHandler(this);
             Thread thread = new Thread(sniffer, "Default_Sniffer");
             thread.start();
-            queues.add(pcap);
+            queues.add(new PcapSniffer(pcap, sniffer.getHttpDecoder()));
             return;
         }
 
@@ -173,7 +263,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
                 sniffer.setExceptionHandler(this);
                 Thread thread = new Thread(sniffer, plugin + "_Sniffer");
                 thread.start();
-                queues.add(pcap);
+                queues.add(new PcapSniffer(pcap, sniffer.getHttpDecoder()));
             }
         }
     }

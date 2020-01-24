@@ -756,7 +756,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
     private Allowed mitm(Packet packet) {
         try {
-            return new SSLProxy(this, rootCert, privateKey, packet).startProxy();
+            return new SSLProxy(this, rootCert, privateKey, packet, packetCapture).startProxy();
         } catch (Exception e) {
             Log.d(TAG, "mitm failed: packet=" + packet, e);
             return null;

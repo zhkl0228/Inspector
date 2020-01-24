@@ -29,7 +29,7 @@ android {
 }
 
 dependencies {
-    compile('com.fuzhu8:tcpcap:1.1.1') {
+    compile('com.fuzhu8:tcpcap:1.1.2') {
         exclude group: '*'
     }
 

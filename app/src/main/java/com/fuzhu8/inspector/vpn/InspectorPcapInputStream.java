@@ -7,7 +7,6 @@ import com.fuzhu8.tcpcap.PcapDLT;
 import org.krakenapps.pcap.PcapInputStream;
 import org.krakenapps.pcap.packet.PcapPacket;
 
-import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -32,7 +31,7 @@ class InspectorPcapInputStream implements PcapInputStream {
     }
 
     @Override
-    public PcapPacket getPacket() throws IOException {
+    public PcapPacket getPacket() {
         try {
             return queue.take();
         } catch (InterruptedException e) {
@@ -49,7 +48,7 @@ class InspectorPcapInputStream implements PcapInputStream {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         queue.clear();
     }
 
