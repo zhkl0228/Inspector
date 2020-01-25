@@ -27,20 +27,13 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.security.InvalidKeyException;
-import java.security.KeyManagementException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Security;
-import java.security.SignatureException;
-import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -82,84 +75,99 @@ public class SSLProxy implements Runnable {
     private static Map<X509Certificate, SSLContext> proxyCertMap = new ConcurrentHashMap<>();
     private X509Certificate peerCertificate;
 
-    SSLProxy(VpnService vpnService, X509Certificate rootCert, PrivateKey privateKey, Packet packet, IPacketCapture packetCapture) throws IOException, InterruptedException, NoSuchAlgorithmException, CertificateException, OperatorCreationException, NoSuchProviderException, SignatureException, InvalidKeyException, KeyStoreException, UnrecoverableKeyException, KeyManagementException {
+    SSLProxy(VpnService vpnService, X509Certificate rootCert, PrivateKey privateKey, Packet packet, IPacketCapture packetCapture) throws Exception {
         this.packet = packet;
         this.packetCapture = packetCapture;
 
-        Socket app = new Socket();
-        app.bind(null);
-        vpnService.protect(app);
-        app.setSoTimeout(10000);
-        app.connect(new InetSocketAddress(InetAddress.getByName(packet.daddr), packet.dport), 3000);
-        X509TrustManager trustManager = new X509TrustManager() {
-            @Override
-            public X509Certificate[] getAcceptedIssuers() {
-                return null;
-            }
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkServerTrusted(X509Certificate[] chain,
-                                           String authType) {
-            }
-            @SuppressLint("TrustAllX509TrustManager")
-            @Override
-            public void checkClientTrusted(X509Certificate[] chain,
-                                           String authType) {
-            }
-        };
-        SSLContext context = SSLContext.getInstance("TLS");
-        context.init(null, new TrustManager[] { trustManager }, new SecureRandom());
-        socket = (SSLSocket) context.getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
-        socket.setSoTimeout(10000);
-        final CountDownLatch countDownLatch = new CountDownLatch(1);
-        socket.addHandshakeCompletedListener(new HandshakeCompletedListener() {
-            @Override
-            public void handshakeCompleted(HandshakeCompletedEvent event) {
-                try {
-                    peerCertificate = (X509Certificate) event.getPeerCertificates()[0];
-                    countDownLatch.countDown();
-                    Log.d(ServiceSinkhole.TAG, "handshakeCompleted event=" + event);
-                } catch (SSLPeerUnverifiedException e) {
-                    Log.d(ServiceSinkhole.TAG, "handshakeCompleted failed", e);
+        Socket app = null;
+        SSLSocket socket = null;
+        SSLServerSocket serverSocket = null;
+        try {
+            app = new Socket();
+            app.bind(null);
+            vpnService.protect(app);
+            app.setSoTimeout(10000);
+            app.connect(new InetSocketAddress(InetAddress.getByName(packet.daddr), packet.dport), 3000);
+            X509TrustManager trustManager = new X509TrustManager() {
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+                    return null;
                 }
+
+                @SuppressLint("TrustAllX509TrustManager")
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain,
+                                               String authType) {
+                }
+
+                @SuppressLint("TrustAllX509TrustManager")
+                @Override
+                public void checkClientTrusted(X509Certificate[] chain,
+                                               String authType) {
+                }
+            };
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, new TrustManager[]{trustManager}, new SecureRandom());
+            socket = (SSLSocket) context.getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
+            socket.setSoTimeout(10000);
+            final CountDownLatch countDownLatch = new CountDownLatch(1);
+            socket.addHandshakeCompletedListener(new HandshakeCompletedListener() {
+                @Override
+                public void handshakeCompleted(HandshakeCompletedEvent event) {
+                    try {
+                        peerCertificate = (X509Certificate) event.getPeerCertificates()[0];
+                        countDownLatch.countDown();
+                        Log.d(ServiceSinkhole.TAG, "handshakeCompleted event=" + event);
+                    } catch (SSLPeerUnverifiedException e) {
+                        Log.d(ServiceSinkhole.TAG, "handshakeCompleted failed", e);
+                    }
+                }
+            });
+            Log.d(ServiceSinkhole.TAG, "startHandshake socket=" + socket);
+            socket.startHandshake();
+            countDownLatch.await(10, TimeUnit.SECONDS);
+            if (peerCertificate == null) {
+                throw new IllegalStateException("handshake failed");
             }
-        });
-        Log.d(ServiceSinkhole.TAG, "startHandshake socket=" + socket);
-        socket.startHandshake();
-        countDownLatch.await(10, TimeUnit.SECONDS);
-        if (peerCertificate == null) {
-            throw new IllegalStateException("handshake failed");
+
+            SSLContext sslContext = proxyCertMap.get(peerCertificate);
+            if (sslContext == null) {
+                KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "SC");
+                keyPairGenerator.initialize(0x400, new SecureRandom());
+                KeyPair keyPair = keyPairGenerator.generateKeyPair();
+                PublicKey publicKey = keyPair.getPublic();
+                X509Certificate certificate = this.generateV3Certificate(publicKey, peerCertificate, rootCert, privateKey);
+                Log.d(ServiceSinkhole.TAG, "generateV3Certificate certificate=" + certificate);
+                certificate.checkValidity(new Date());
+                certificate.verify(rootCert.getPublicKey());
+
+                char[] password = "keypass".toCharArray();
+                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                keyStore.load(null, password);
+                keyStore.setKeyEntry("alias", keyPair.getPrivate(), password, new Certificate[]{certificate});
+
+                KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                keyManagerFactory.init(keyStore, password);
+
+                sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+                sslContext.getServerSessionContext().setSessionTimeout(10);
+                proxyCertMap.put(peerCertificate, sslContext);
+            }
+
+            SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
+            serverSocket = (SSLServerSocket) factory.createServerSocket(0);
+            serverSocket.setSoTimeout(10000);
+            serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
+
+            this.socket = socket;
+            this.serverSocket = serverSocket;
+        } catch (Exception e) {
+            IOUtils.closeQuietly(app);
+            IOUtils.closeQuietly(socket);
+            IOUtils.closeQuietly(serverSocket);
+            throw e;
         }
-
-        SSLContext sslContext = proxyCertMap.get(peerCertificate);
-        if (sslContext == null) {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "SC");
-            keyPairGenerator.initialize(0x400, new SecureRandom());
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
-            PublicKey publicKey = keyPair.getPublic();
-            X509Certificate certificate = this.generateV3Certificate(publicKey, peerCertificate, rootCert, privateKey);
-            Log.d(ServiceSinkhole.TAG, "generateV3Certificate certificate=" + certificate);
-            certificate.checkValidity(new Date());
-            certificate.verify(rootCert.getPublicKey());
-
-            char[] password = "keypass".toCharArray();
-            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            keyStore.load(null, password);
-            keyStore.setKeyEntry("alias", keyPair.getPrivate(), password, new Certificate[]{certificate});
-
-            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            keyManagerFactory.init(keyStore, password);
-
-            sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
-            sslContext.getServerSessionContext().setSessionTimeout(10);
-            proxyCertMap.put(peerCertificate, sslContext);
-        }
-
-        SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
-        serverSocket = (SSLServerSocket) factory.createServerSocket(0);
-        serverSocket.setSoTimeout(10000);
-        serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
     }
 
     private static final long ONE_YEAR_IN_MS = TimeUnit.DAYS.toMillis(365);
@@ -222,9 +230,9 @@ public class SSLProxy implements Runnable {
         }
 
         private void doForward() throws RemoteException {
-            byte[] buf = new byte[RECEIVE_BUFFER_SIZE];
-            int read;
             try {
+                byte[] buf = new byte[RECEIVE_BUFFER_SIZE];
+                int read;
                 while (!canStop) {
                     try {
                         while ((read = inputStream.read(buf)) != -1) {
@@ -274,19 +282,20 @@ public class SSLProxy implements Runnable {
             OutputStream localOut = local.getOutputStream();
             InputStream socketIn = socket.getInputStream();
             OutputStream socketOut = socket.getOutputStream();
+
             if (packetCapture != null) {
-                packetCapture.onSSLProxyEstablish(client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
+                try {
+                    packetCapture.onSSLProxyEstablish(client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
+                } catch (RemoteException ignored) {
+                }
             }
             new StreamForward(localIn, socketOut, local, true, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
             new StreamForward(socketIn, localOut, socket, false, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
-        } catch(SocketTimeoutException e) {
-            IOUtils.closeQuietly(socket);
         } catch (IOException e) {
             Log.d(ServiceSinkhole.TAG, "accept failed: " + packet, e);
 
             IOUtils.closeQuietly(socket);
             IOUtils.closeQuietly(local);
-        } catch (RemoteException ignored) {
         } finally {
             IOUtils.closeQuietly(serverSocket);
         }

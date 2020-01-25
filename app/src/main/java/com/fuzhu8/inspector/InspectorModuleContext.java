@@ -80,7 +80,7 @@ public class InspectorModuleContext implements FileFilter, ModuleContext {
 	}
 
 	private LibraryAbi[] createAbi(File dataDir) {
-		List<LibraryAbi> abis = new ArrayList<LibraryAbi>();
+		List<LibraryAbi> abis = new ArrayList<>();
 		if(dataDir != null) {
 			File inspectorLibs = new File(dataDir, "inspector_libs");
 			String abi = Build.CPU_ABI;
