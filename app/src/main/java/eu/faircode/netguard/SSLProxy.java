@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -88,7 +89,8 @@ public class SSLProxy implements Runnable {
         Socket app = new Socket();
         app.bind(null);
         vpnService.protect(app);
-        app.connect(new InetSocketAddress(packet.daddr, packet.dport), 5000);
+        app.setSoTimeout(10000);
+        app.connect(new InetSocketAddress(InetAddress.getByName(packet.daddr), packet.dport), 3000);
         X509TrustManager trustManager = new X509TrustManager() {
             @Override
             public X509Certificate[] getAcceptedIssuers() {
@@ -108,6 +110,7 @@ public class SSLProxy implements Runnable {
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(null, new TrustManager[] { trustManager }, new SecureRandom());
         socket = (SSLSocket) context.getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
+        socket.setSoTimeout(10000);
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         socket.addHandshakeCompletedListener(new HandshakeCompletedListener() {
             @Override
@@ -187,6 +190,8 @@ public class SSLProxy implements Runnable {
         return new Allowed("127.0.0.1", serverSocket.getLocalPort());
     }
 
+    private boolean canStop;
+
     private class StreamForward implements Runnable {
         private final InputStream inputStream;
         private final OutputStream outputStream;
@@ -220,20 +225,26 @@ public class SSLProxy implements Runnable {
             byte[] buf = new byte[RECEIVE_BUFFER_SIZE];
             int read;
             try {
-                while ((read = inputStream.read(buf)) != -1) {
-                    outputStream.write(buf, 0, read);
+                while (!canStop) {
+                    try {
+                        while ((read = inputStream.read(buf)) != -1) {
+                            outputStream.write(buf, 0, read);
 
-                    if (packetCapture != null) {
-                        try {
-                            if (send) {
-                                packetCapture.onSSLProxyTX(clientIp, serverIp, clientPort, serverPort, Arrays.copyOf(buf, read));
+                            if (packetCapture != null) {
+                                try {
+                                    if (send) {
+                                        packetCapture.onSSLProxyTX(clientIp, serverIp, clientPort, serverPort, Arrays.copyOf(buf, read));
+                                    } else {
+                                        packetCapture.onSSLProxyRX(clientIp, serverIp, clientPort, serverPort, Arrays.copyOf(buf, read));
+                                    }
+                                } catch (RemoteException ignored) {
+                                }
                             } else {
-                                packetCapture.onSSLProxyRX(clientIp, serverIp, clientPort, serverPort, Arrays.copyOf(buf, read));
+                                Log.d(ServiceSinkhole.TAG, Inspector.inspectString(Arrays.copyOf(buf, read), socket.toString()));
                             }
-                        } catch (RemoteException ignored) {
                         }
-                    } else {
-                        Log.d(ServiceSinkhole.TAG, Inspector.inspectString(Arrays.copyOf(buf, read), socket.toString()));
+                        break;
+                    } catch (SocketTimeoutException ignored) {
                     }
                 }
             } catch (IOException ignored) {
@@ -242,8 +253,9 @@ public class SSLProxy implements Runnable {
                 IOUtils.closeQuietly(outputStream);
                 IOUtils.closeQuietly(socket);
 
+                canStop = true;
                 if (packetCapture != null) {
-                    packetCapture.onSSLProxyFinish(clientIp, serverIp, clientPort, serverPort);
+                    packetCapture.onSSLProxyFinish(clientIp, serverIp, clientPort, serverPort, send);
                 }
             }
         }
@@ -254,6 +266,7 @@ public class SSLProxy implements Runnable {
         SSLSocket local = null;
         try {
             local = (SSLSocket) serverSocket.accept();
+            local.setSoTimeout(10000);
 
             InetSocketAddress client = (InetSocketAddress) local.getRemoteSocketAddress();
             InetSocketAddress server = (InetSocketAddress) socket.getRemoteSocketAddress();

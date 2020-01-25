@@ -1,16 +1,15 @@
 package com.nagapt.udog;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import org.apache.commons.io.FileUtils;
+import android.os.Environment;
 
 import com.fuzhu8.inspector.Unpacker;
 import com.fuzhu8.inspector.jni.Native;
-import com.sun.jna.Platform;
 
-import android.os.Environment;
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * @author zhkl0228
@@ -68,7 +67,7 @@ public class UDogUnpacker extends Native implements Unpacker {
 	 */
 	@Override
 	protected boolean hasSupported() {
-		return !Platform.is64Bit() && Platform.isARM();
+		return false;
 	}
 
 	@Override

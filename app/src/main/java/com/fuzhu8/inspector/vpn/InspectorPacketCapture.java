@@ -194,7 +194,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
     }
 
     @Override
-    public synchronized void onSSLProxyFinish(String clientIp, String serverIp, int clientPort, int serverPort) {
+    public synchronized void onSSLProxyFinish(String clientIp, String serverIp, int clientPort, int serverPort, boolean send) {
         try {
             TcpSessionKey key = new TcpSessionKeyImpl(InetAddress.getByName(clientIp), InetAddress.getByName(serverIp), clientPort, serverPort);
 
@@ -205,7 +205,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
             }
 
             if (inspector.isDebug()) {
-                inspector.println("onSSLProxyFinish key=" + key);
+                inspector.println("onSSLProxyFinish key=" + key + ", send=" + send);
             }
         } catch (UnknownHostException e) {
             inspector.println(e);
