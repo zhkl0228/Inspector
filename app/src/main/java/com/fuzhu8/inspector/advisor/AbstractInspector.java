@@ -148,8 +148,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import capstone.Arm;
 import capstone.Arm_const;
 import capstone.Capstone;
+import cn.android.bridge.AndroidBridge;
 import cn.banny.utils.StringUtils;
-import de.robv.android.xposed.XposedBridge;
 import jadx.api.JadxArgs;
 import jadx.api.JadxDecompiler;
 import jadx.api.JavaClass;
@@ -642,22 +642,16 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				onConnected(console);
 
 				println("Connect to console[" + console.getClass().getSimpleName() + "] successfully! ");
-				InspectCache cache;
-				while ((cache = cacheQueue.poll()) != null) {
-					try {
-						cache.writeTo(console);
-					} catch (IOException ignored) {
-					}
-				}
+				flushCache();
 
 				Command command;
 				StringBuffer lua = new StringBuffer();
 				while (this.console != null && (command = this.console.readCommand()) != null) {
 					// log("Received command: " + command);
+					flushCache();
 
 					command.execute(lua, this, this.context);
 				}
-
 			} catch (SocketTimeoutException ignored) {
 			} catch (SocketException e) {
 				IOUtils.closeQuietly(serverSocket);
@@ -978,7 +972,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		if (console == null || isMainThread()) {
 			if (cache.canCache()) {
 				cacheQueue.offer(cache);
-				while (cacheQueue.size() > 512) {
+				while (cacheQueue.size() > 10000) {
 					cacheQueue.poll();
 				}
 			}
@@ -986,10 +980,19 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		try {
+			flushCache();
+
 			cache.writeTo(console);
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			closeConsole();
+		}
+	}
+
+	private synchronized void flushCache() throws IOException {
+		InspectCache cached;
+		while ((cached = cacheQueue.poll()) != null) {
+			cached.writeTo(console);
 		}
 	}
 
@@ -1639,7 +1642,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		// println("usingMultiVirtualApp: " + EasyProtectorLib.checkIsRunningInVirtualApk());
 		println("xposedExist: " + EasyProtectorLib.checkIsXposedExist());
 
-		Field field = XposedBridge.class.getDeclaredField("disableHooks");
+		Field field = AndroidBridge.class.getDeclaredField("disableHooks");
 		field.setAccessible(true);
 		boolean disableHooks = field.getBoolean(null);
 		if (disableHooks) {
@@ -2186,74 +2189,6 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 	}
 
-	String ngetInfoA(Object thisObj, String publicKey, String cId, String ret) {
-		println("ngetInfoA publicKey=" + publicKey +
-				", cId=" + cId +
-				", ret=" + ret);
-		return ret;
-	}
-
-	byte[] ngetInfoB(Object thisObj, byte[] ret) {
-		inspect(ret, "ngetInfoB");
-		return ret;
-	}
-
-	String ngetNormalBillingRequest(Object thisObj, String appId, String content, String type, String ret) {
-		println("ngetNormalBillingRequest appId=" + appId +
-				", content=" + content +
-				", type=" + type +
-				", ret=" + ret);
-		return ret;
-	}
-
-	String ngetSecureBillingRequest(Object thisObj, String appId, String content, String type, String ret) {
-		println("ngetSecureBillingRequest appId=" + appId +
-				", content=" + content +
-				", type=" + type +
-				", ret=" + ret);
-		return ret;
-	}
-
-	String ngetSecureSessionRequest(Object thisObj, String appId, String content, String string, String type, String ret) {
-		println("ngetSecureSessionRequest appId=" + appId +
-				", content=" + content +
-				", string=" + string +
-				", type=" + type +
-				", ret=" + ret);
-		return ret;
-	}
-
-	/**
-	 * void sendTextMessage(String destinationAddress, String scAddress, String text, PendingIntent sentIntent, PendingIntent deliveryIntent);
-	 */
-	/*void sendTextMessage(Object thisObj, String destinationAddress, String scAddress, String text,
-						 PendingIntent sentIntent, PendingIntent deliveryIntent) {
-		sendTextInternal(destinationAddress, scAddress, text, sentIntent, deliveryIntent, "sendTextMessage");
-	}
-
-	void sendText(Object thisObj, String destinationAddress, String scAddress, String text,
-				  PendingIntent sentIntent, PendingIntent deliveryIntent) {
-		sendTextInternal(destinationAddress, scAddress, text, sentIntent, deliveryIntent, "sendText");
-	}
-
-	void sendText(Object thisObj, String callingPkg, String destinationAddress, String scAddress, String text,
-				  PendingIntent sentIntent, PendingIntent deliveryIntent) {
-		sendTextInternal(destinationAddress, scAddress, text, sentIntent, deliveryIntent, "sendText");
-	}
-
-	void sendTextForSubscriber(Object thisObj, int subId, String callingPkg, String destinationAddress, String scAddress, String text,
-							   PendingIntent sentIntent, PendingIntent deliveryIntent, boolean persistMessageForNonDefaultSmsApp) {
-		sendTextInternal(destinationAddress, scAddress, text, sentIntent, deliveryIntent, "sendText");
-	}
-
-	private void sendTextInternal(String destinationAddress,
-								  String scAddress, String text, PendingIntent sentIntent,
-								  PendingIntent deliveryIntent, String label) {
-		for (Plugin plugin : context.getPlugins()) {
-			plugin.notifySendTextMessage(destinationAddress, scAddress, text, sentIntent, deliveryIntent, label);
-		}
-	}*/
-
 	private static final int WPE = 16;
 
 	/**
@@ -2395,15 +2330,6 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				try {
 					serverSocketPort = 20000 + random.nextInt(5000);
 					serverSocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), serverSocketPort));
-
-					/*try {
-						File tmp = new File(Environment.getExternalStorageDirectory(), "inspector/" + Process.myPid());
-						FileUtils.deleteQuietly(tmp);
-						FileUtils.writeStringToFile(new File(tmp, String.valueOf(serverSocketPort)), context.getProcessName());
-					} catch (Exception e) {
-						super.log("initializeLogServer failed: " + context.getProcessName() + ", pid=" + Process.myPid());
-						XposedBridge.log(e);
-					}*/
 
 					try {
 						initializeLocalServerSocketDiscover();

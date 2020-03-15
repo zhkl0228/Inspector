@@ -82,7 +82,7 @@ public class InspectorModuleContext implements FileFilter, ModuleContext {
 	private LibraryAbi[] createAbi(File dataDir) {
 		List<LibraryAbi> abis = new ArrayList<>();
 		if(dataDir != null) {
-			File inspectorLibs = new File(dataDir, "inspector_libs");
+			File inspectorLibs = new File(dataDir, "inspector_libs/" + processName.replace(':', '_'));
 			String abi = Build.CPU_ABI;
 			abis.add(new LibraryAbi(new File(inspectorLibs, abi), abi));
 			if("armeabi-v7a".equals(abi)) {

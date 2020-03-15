@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author zhkl0228
@@ -19,7 +20,7 @@ public class SocketConsole implements Console {
 	private DataInputStream reader;
 	private OutputStream outputStream;
 	
-	public synchronized void open(Closeable obj, InputStream inputStream, OutputStream outputStream) throws IOException {
+	public synchronized void open(Closeable obj, InputStream inputStream, OutputStream outputStream) {
 		this.socket = obj;
 		this.outputStream = outputStream;
 		this.reader = new DataInputStream(inputStream);
@@ -61,7 +62,7 @@ public class SocketConsole implements Console {
 			length = reader.readInt();
 			data = new byte[length];
 			reader.readFully(data);
-			return new LuaCommand(new String(data, "UTF-8"));
+			return new LuaCommand(new String(data, StandardCharsets.UTF_8));
 		case 2:
 			length = reader.readInt();
 			data = new byte[length];

@@ -17,7 +17,7 @@ import org.keplerproject.luajava.LuaStateFactory;
 public abstract class AbstractLuaScriptManager extends AbstractAdvisor
 		implements LuaScriptManager {
 	
-	protected final LuaState luaState;
+	private final LuaState luaState;
 
 	public AbstractLuaScriptManager(ModuleContext context) {
 		super(context);
@@ -36,7 +36,7 @@ public abstract class AbstractLuaScriptManager extends AbstractAdvisor
 	protected void executeHook() {
 	}
 
-	protected LuaState createLuaState() {
+	private LuaState createLuaState() {
 		LuaState luaState = LuaStateFactory.newLuaState();
 		luaState.openBase();
 		luaState.openLibs();
