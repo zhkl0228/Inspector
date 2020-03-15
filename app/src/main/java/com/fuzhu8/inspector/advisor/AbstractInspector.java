@@ -632,6 +632,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 				Socket socket = serverSocket.accept();
 				assert socket != null;
+				socket.setSoTimeout(100);
 
 				socket.setKeepAlive(true);
 				socket.setKeepAlive(true);
@@ -642,15 +643,18 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				onConnected(console);
 
 				println("Connect to console[" + console.getClass().getSimpleName() + "] successfully! ");
-				flushCache();
 
-				Command command;
 				StringBuffer lua = new StringBuffer();
-				while (this.console != null && (command = this.console.readCommand()) != null) {
-					// log("Received command: " + command);
+				while (this.console != null) {
 					flushCache();
 
-					command.execute(lua, this, this.context);
+					try {
+						Command command = this.console.readCommand();
+						// log("Received command: " + command);
+
+						command.execute(lua, this, this.context);
+					} catch (SocketTimeoutException ignored) {
+					}
 				}
 			} catch (SocketTimeoutException ignored) {
 			} catch (SocketException e) {
@@ -980,8 +984,6 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		try {
-			flushCache();
-
 			cache.writeTo(console);
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
