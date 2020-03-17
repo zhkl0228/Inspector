@@ -120,6 +120,14 @@ public class InspectorModuleContext implements FileFilter, ModuleContext {
 	public List<Plugin> getPlugins() {
 		return Collections.unmodifiableList(plugins);
 	}
+
+	private final List<String> pluginApkList = new ArrayList<>();
+
+	@Override
+	public List<String> getPluginApkList() {
+		return Collections.unmodifiableList(pluginApkList);
+	}
+
 	@Override
 	public void discoverPlugins(DexFileManager dexFileManager, Inspector inspector, LuaScriptManager scriptManager, ClassLoader classLoader, Hooker hooker) {
 		plugins = new ArrayList<>();
@@ -131,10 +139,13 @@ public class InspectorModuleContext implements FileFilter, ModuleContext {
 		// inspector.println(targetApk);
 		
 		for(PluginApk pluginApk : list) {
+			pluginApkList.add(pluginApk.getApkFile().getAbsolutePath());
+
 			JarFile jarFile = null;
 			InputStream is = null;
 			try {
-				File libPath = new File(Environment.getDataDirectory(), "data/" + pluginApk.getPackageName() + "/lib");
+				// /data/data/com.tencent.mm/inspector_libs/com.tencent.mm_push/arm64-v8a
+				File libPath = new File(Environment.getDataDirectory(), "data/" + targetApk.getPackageName() + "/inspector_libs/" + processName.replace(':', '_') + "/" + Build.CPU_ABI);
 				File filesDir = new File(Environment.getDataDirectory(), "data/" + targetApk.getPackageName() + "/files");
 
 				if (pluginApk.getPluginClassName() != null) {

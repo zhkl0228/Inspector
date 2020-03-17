@@ -1,22 +1,21 @@
 package com.fuzhu8.inspector.xposed;
 
+import com.fuzhu8.inspector.InspectorModuleContext;
+import com.fuzhu8.inspector.LibraryAbi;
+import com.fuzhu8.inspector.LoadLibraryFake;
+import com.fuzhu8.inspector.ModuleContext;
+import com.fuzhu8.inspector.advisor.AbstractHookHandler;
+
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
-
-import com.fuzhu8.inspector.LibraryAbi;
-import com.fuzhu8.inspector.LoadLibraryFake;
-import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.InspectorModuleContext;
-import com.fuzhu8.inspector.advisor.AbstractHookHandler;
 
 import de.robv.android.xposed.XposedBridge;
 
@@ -75,21 +74,15 @@ public class XposedLoadLibraryFake extends AbstractHookHandler implements LoadLi
 	@SuppressWarnings("unused")
 	public static File extractAssets(String apkPath, String assertName, File parentDir) {
 		File apkFile = new File(apkPath);
-		JarFile jarFile = null;
-		try {
-			jarFile = new JarFile(apkFile);
+		try (JarFile jarFile = new JarFile(apkFile)) {
 			JarEntry entry = jarFile.getJarEntry(assertName);
-			if(entry == null) {
+			if (entry == null) {
 				return null;
 			}
 			return writeJarEntry(parentDir, jarFile, entry, false);
-		} catch(Exception t) {
+		} catch (Exception t) {
 			XposedBridge.log(t);
 			return null;
-		} finally {
-			if(jarFile != null) {
-				try { jarFile.close(); } catch(IOException ignored) {}
-			}
 		}
 	}
 
@@ -114,30 +107,25 @@ public class XposedLoadLibraryFake extends AbstractHookHandler implements LoadLi
 			
 			final String prefix = "lib/" + abi.getAbi() + '/';
 			final String assetsPrefix = "assets/" + abi.getAbi() + '/';
-			JarFile jarFile = null;
-			try {
-				jarFile = new JarFile(apkFile);
+			try (JarFile jarFile = new JarFile(apkFile)) {
 				Enumeration<JarEntry> entries = jarFile.entries();
-				while(entries.hasMoreElements()) {
+				while (entries.hasMoreElements()) {
 					JarEntry entry = entries.nextElement();
-					
-					if(entry.getName().startsWith(assetsPrefix)) {
+
+					if (entry.getName().startsWith(assetsPrefix)) {
 						writeJarEntry(libDir, jarFile, entry, true);
 						continue;
 					}
-					
-					if(!entry.getName().startsWith(prefix)) {
+
+					if (!entry.getName().startsWith(prefix)) {
 						continue;
 					}
-					
+
 					writeJarEntry(libDir, jarFile, entry, true);
 				}
-			} catch(Throwable t) {
+			} catch (Throwable t) {
 				XposedBridge.log(t);
 			} finally {
-				if(jarFile != null) {
-					try { jarFile.close(); } catch(IOException ignored) {}
-				}
 				abi.lastApkModified = apkFile.lastModified();
 			}
 			
