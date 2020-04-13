@@ -82,7 +82,7 @@ public class InspectorModuleContext implements FileFilter, ModuleContext {
 	private LibraryAbi[] createAbi(File dataDir) {
 		List<LibraryAbi> abis = new ArrayList<>();
 		if(dataDir != null) {
-			File inspectorLibs = new File(dataDir, "inspector_libs/" + processName.replace(':', '_'));
+			File inspectorLibs = new File(dataDir, "inspector_libs/" + processProcessName());
 			String abi = Build.CPU_ABI;
 			abis.add(new LibraryAbi(new File(inspectorLibs, abi), abi));
 			if("armeabi-v7a".equals(abi)) {
@@ -128,6 +128,14 @@ public class InspectorModuleContext implements FileFilter, ModuleContext {
 		return Collections.unmodifiableList(pluginApkList);
 	}
 
+	private String processProcessName() {
+		if (processName == null) {
+			return "def";
+		} else {
+			return processName.replace(':', '_');
+		}
+	}
+
 	@Override
 	public void discoverPlugins(DexFileManager dexFileManager, Inspector inspector, LuaScriptManager scriptManager, ClassLoader classLoader, Hooker hooker) {
 		plugins = new ArrayList<>();
@@ -145,7 +153,7 @@ public class InspectorModuleContext implements FileFilter, ModuleContext {
 			InputStream is = null;
 			try {
 				// /data/data/com.tencent.mm/inspector_libs/com.tencent.mm_push/arm64-v8a
-				File libPath = new File(Environment.getDataDirectory(), "data/" + targetApk.getPackageName() + "/inspector_libs/" + processName.replace(':', '_') + "/" + Build.CPU_ABI);
+				File libPath = new File(Environment.getDataDirectory(), "data/" + targetApk.getPackageName() + "/inspector_libs/" + processProcessName() + "/" + Build.CPU_ABI);
 				File filesDir = new File(Environment.getDataDirectory(), "data/" + targetApk.getPackageName() + "/files");
 
 				if (pluginApk.getPluginClassName() != null) {

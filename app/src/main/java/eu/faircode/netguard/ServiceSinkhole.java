@@ -818,8 +818,6 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
         if (packetCapture != null) {
             enableNetwork(uid, packetCapture, pid);
-        } else {
-            disableNetwork();
         }
     }
 
