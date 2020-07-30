@@ -1,6 +1,8 @@
 package com.fuzhu8.inspector;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author zhkl0228
@@ -25,6 +27,6 @@ public class LibraryAbi {
 		return abi;
 	}
 	
-	public long lastApkModified = -1;
+	public final Map<String, Long> lastApkModified = new HashMap<>();
 
 }

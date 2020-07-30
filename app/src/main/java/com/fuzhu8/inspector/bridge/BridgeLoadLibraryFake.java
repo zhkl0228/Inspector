@@ -1,12 +1,13 @@
 package com.fuzhu8.inspector.bridge;
 
+import com.fuzhu8.inspector.BuildConfig;
 import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.LibraryAbi;
 import com.fuzhu8.inspector.LoadLibraryFake;
 import com.fuzhu8.inspector.ModuleContext;
 import com.fuzhu8.inspector.advisor.AbstractHookHandler;
+import com.fuzhu8.inspector.ApkPath;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 
@@ -50,16 +51,18 @@ public class BridgeLoadLibraryFake extends AbstractHookHandler implements LoadLi
 	@SuppressWarnings("unused")
 	protected final String findLibrary(Object thisObj, String libName, String path) {
 		if(path != null &&
+				!path.contains(InspectorModuleContext.INSPECTOR_LIB_DIR) &&
 				new File(path).canExecute()) {
 			return path;
 		}
 		
 		final String libFile = "lib" + libName + ".so";
-		List<String> list = new ArrayList<>();
-		list.add(context.getModulePath());
+		List<ApkPath> list = new ArrayList<>();
+		list.add(new ApkPath(BuildConfig.APPLICATION_ID, context.getModulePath()));
 		list.addAll(context.getPluginApkList());
-		for(String apk : list) {
-			File libDir = findLibsDir(context.getAbiDirectory(), apk, libFile);
+		for(ApkPath apk : list) {
+			File libDir = findLibsDir(context.getAbiDirectory(), apk.path, libFile, apk.packageName);
+//			log("findLibrary path=" + apk.path + ", libFile=" + libFile + ", packageName=" + apk.packageName + ", libDir=" + libDir);
 			if(libDir == null) {
 				libDir = context.getModuleLibDir();
 			}
@@ -74,10 +77,6 @@ public class BridgeLoadLibraryFake extends AbstractHookHandler implements LoadLi
 		}
 		
 		return path;
-	}
-	
-	private static File findLibsDir(LibraryAbi[] abis, String apkPath, String fileName) {
-		return findLibsDir(abis, apkPath, fileName, null);
 	}
 
 	@SuppressWarnings("unused")
@@ -95,22 +94,28 @@ public class BridgeLoadLibraryFake extends AbstractHookHandler implements LoadLi
 		}
 	}
 
-	private static File findLibsDir(LibraryAbi[] abis, String apkPath, String fileName, String sub) {
+	private File findLibsDir(LibraryAbi[] abis, String apkPath, String fileName, String packageName) {
 		for(LibraryAbi abi : abis) {
+			if (!abi.lastApkModified.containsKey(packageName)) {
+				abi.lastApkModified.put(packageName, -1L);
+			}
+
 			File libDir = abi.getAppLibDir();
-			if(sub != null && sub.trim().length() > 0) {
-				libDir = new File(libDir, sub.trim());
+			if(packageName != null && packageName.trim().length() > 0) {
+				libDir = new File(libDir, packageName.trim());
 			}
 			
 			File targetFile = new File(libDir, fileName);
 			File apkFile = new File(apkPath);
-			if(abi.lastApkModified == apkFile.lastModified() &&
+//			log("findLibsDir apkPath=" + apkPath + ", fileName=" + fileName + ", packageName=" + packageName + ", lastApkModified=" + abi.lastApkModified + ", lastModified=" + apkFile.lastModified());
+
+			if(abi.lastApkModified.get(packageName) == apkFile.lastModified() &&
 					targetFile.canExecute()) {
 				return libDir;
 			}
 			libDir.mkdirs();
 			
-			if(abi.lastApkModified == apkFile.lastModified()) {
+			if(abi.lastApkModified.get(packageName) == apkFile.lastModified()) {
 				continue;
 			}
 			
@@ -135,7 +140,7 @@ public class BridgeLoadLibraryFake extends AbstractHookHandler implements LoadLi
 			} catch (Throwable t) {
 				AndroidBridge.log(t);
 			} finally {
-				abi.lastApkModified = apkFile.lastModified();
+				abi.lastApkModified.put(packageName, apkFile.lastModified());
 			}
 			
 			if(targetFile.canExecute()) {

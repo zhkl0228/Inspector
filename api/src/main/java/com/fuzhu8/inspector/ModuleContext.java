@@ -31,7 +31,7 @@ public interface ModuleContext {
 
     List<Plugin> getPlugins();
 
-    List<String> getPluginApkList();
+    List<ApkPath> getPluginApkList();
 
     void discoverPlugins(DexFileManager dexFileManager, Inspector inspector, LuaScriptManager scriptManager, ClassLoader classLoader, Hooker hooker);
 

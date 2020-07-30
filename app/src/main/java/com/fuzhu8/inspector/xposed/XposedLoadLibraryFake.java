@@ -1,5 +1,7 @@
 package com.fuzhu8.inspector.xposed;
 
+import com.fuzhu8.inspector.ApkPath;
+import com.fuzhu8.inspector.BuildConfig;
 import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.LibraryAbi;
 import com.fuzhu8.inspector.LoadLibraryFake;
@@ -13,10 +15,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import cn.android.bridge.AndroidBridge;
 import de.robv.android.xposed.XposedBridge;
 
 /**
@@ -46,29 +51,32 @@ public class XposedLoadLibraryFake extends AbstractHookHandler implements LoadLi
 	 */
 	protected final String findLibrary(Object thisObj, String libName, String path) {
 		if(path != null &&
+				!path.contains(InspectorModuleContext.INSPECTOR_LIB_DIR) &&
 				new File(path).canExecute()) {
 			return path;
 		}
-		
+
 		final String libFile = "lib" + libName + ".so";
-		File libDir = findLibsDir(context.getAbiDirectory(), context.getModulePath(), libFile);
-		if(libDir == null) {
-			libDir = context.getModuleLibDir();
+		List<ApkPath> list = new ArrayList<>();
+		list.add(new ApkPath(BuildConfig.APPLICATION_ID, context.getModulePath()));
+		list.addAll(context.getPluginApkList());
+		for(ApkPath apk : list) {
+			File libDir = findLibsDir(context.getAbiDirectory(), apk.path, libFile, apk.packageName);
+//			log("findLibrary path=" + apk.path + ", libFile=" + libFile + ", packageName=" + apk.packageName + ", libDir=" + libDir);
+			if(libDir == null) {
+				libDir = context.getModuleLibDir();
+			}
+
+			File file = new File(libDir, libFile);
+			if(file.canExecute()) {
+				if(InspectorModuleContext.isDebug()) {
+					log("findLibrary: " + file);
+				}
+				return file.getAbsolutePath();
+			}
 		}
 
-		File file = new File(libDir, libFile);
-		if(file.canExecute()) {
-			if(InspectorModuleContext.isDebug()) {
-				log("findLibrary: " + file);
-			}
-			return file.getAbsolutePath();
-		}
-		
 		return path;
-	}
-	
-	private static File findLibsDir(LibraryAbi[] abis, String apkPath, String fileName) {
-		return findLibsDir(abis, apkPath, fileName, null);
 	}
 
 	@SuppressWarnings("unused")
@@ -86,25 +94,31 @@ public class XposedLoadLibraryFake extends AbstractHookHandler implements LoadLi
 		}
 	}
 
-	private static File findLibsDir(LibraryAbi[] abis, String apkPath, String fileName, String sub) {
+	private File findLibsDir(LibraryAbi[] abis, String apkPath, String fileName, String packageName) {
 		for(LibraryAbi abi : abis) {
-			File libDir = abi.getAppLibDir();
-			if(sub != null && sub.trim().length() > 0) {
-				libDir = new File(libDir, sub.trim());
+			if (!abi.lastApkModified.containsKey(packageName)) {
+				abi.lastApkModified.put(packageName, -1L);
 			}
-			
+
+			File libDir = abi.getAppLibDir();
+			if(packageName != null && packageName.trim().length() > 0) {
+				libDir = new File(libDir, packageName.trim());
+			}
+
 			File targetFile = new File(libDir, fileName);
 			File apkFile = new File(apkPath);
-			if(abi.lastApkModified == apkFile.lastModified() &&
+//			log("findLibsDir apkPath=" + apkPath + ", fileName=" + fileName + ", packageName=" + packageName + ", lastApkModified=" + abi.lastApkModified + ", lastModified=" + apkFile.lastModified());
+
+			if(abi.lastApkModified.get(packageName) == apkFile.lastModified() &&
 					targetFile.canExecute()) {
 				return libDir;
 			}
 			libDir.mkdirs();
-			
-			if(abi.lastApkModified == apkFile.lastModified()) {
+
+			if(abi.lastApkModified.get(packageName) == apkFile.lastModified()) {
 				continue;
 			}
-			
+
 			final String prefix = "lib/" + abi.getAbi() + '/';
 			final String assetsPrefix = "assets/" + abi.getAbi() + '/';
 			try (JarFile jarFile = new JarFile(apkFile)) {
@@ -124,16 +138,16 @@ public class XposedLoadLibraryFake extends AbstractHookHandler implements LoadLi
 					writeJarEntry(libDir, jarFile, entry, true);
 				}
 			} catch (Throwable t) {
-				XposedBridge.log(t);
+				AndroidBridge.log(t);
 			} finally {
-				abi.lastApkModified = apkFile.lastModified();
+				abi.lastApkModified.put(packageName, apkFile.lastModified());
 			}
-			
+
 			if(targetFile.canExecute()) {
 				return libDir;
 			}
 		}
-		
+
 		return null;
 	}
 
