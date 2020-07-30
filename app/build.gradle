@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 allprojects {
     repositories {
         mavenLocal()
-        maven{ url 'http://p.gzmtx.cn:8081/nexus/content/groups/public/' }
+        maven{ url 'http://jdly3101.3322.org:8081/nexus/content/groups/public/' }
         jcenter()
     }
 }

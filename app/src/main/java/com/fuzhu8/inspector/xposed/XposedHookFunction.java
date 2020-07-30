@@ -10,13 +10,14 @@ import com.fuzhu8.inspector.script.hook.HookFunctionRequest;
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
 
+import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 
 /**
  * @author zhkl0228
  *
  */
-public class XposedHookFunction extends HookFunction implements ClassLoaderListener {
+public class XposedHookFunction extends HookFunction<XC_MethodHook> implements ClassLoaderListener {
 
 	XposedHookFunction(LuaState L, Inspector inspector, DexFileManager dexFileManager,
 					   ModuleContext context) {
@@ -24,7 +25,7 @@ public class XposedHookFunction extends HookFunction implements ClassLoaderListe
 	}
 
 	@Override
-	protected HookFunctionRequest createHookFunctionRequest(String clazz, String method, LuaObject callback,
+	protected HookFunctionRequest<XC_MethodHook> createHookFunctionRequest(String clazz, String method, LuaObject callback,
 			String[] params) {
 		return new XposedHookFunctionRequest(clazz, method, callback, context.getHooker(), params);
 	}

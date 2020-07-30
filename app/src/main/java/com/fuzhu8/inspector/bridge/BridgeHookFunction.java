@@ -11,12 +11,13 @@ import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
 
 import cn.android.bridge.AndroidBridge;
+import cn.android.bridge.XC_MethodHook;
 
 /**
  * @author zhkl0228
  *
  */
-public class BridgeHookFunction extends HookFunction implements ClassLoaderListener {
+public class BridgeHookFunction extends HookFunction<XC_MethodHook> implements ClassLoaderListener {
 
 	BridgeHookFunction(LuaState L, Inspector inspector, DexFileManager dexFileManager,
 					   ModuleContext context) {
@@ -24,7 +25,7 @@ public class BridgeHookFunction extends HookFunction implements ClassLoaderListe
 	}
 
 	@Override
-	protected HookFunctionRequest createHookFunctionRequest(String clazz, String method, LuaObject callback,
+	protected HookFunctionRequest<XC_MethodHook> createHookFunctionRequest(String clazz, String method, LuaObject callback,
 			String[] params) {
 		return new BridgeHookFunctionRequest(clazz, method, callback, context.getHooker(), params);
 	}

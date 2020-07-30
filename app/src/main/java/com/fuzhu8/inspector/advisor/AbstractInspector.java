@@ -85,6 +85,7 @@ import com.fuzhu8.inspector.jni.InspectorNative;
 import com.fuzhu8.inspector.jni.TraceAnti;
 import com.fuzhu8.inspector.kraken.KrakenCapture;
 import com.fuzhu8.inspector.maps.NativeLibraryMapInfo;
+import com.fuzhu8.inspector.plugin.LoadedModule;
 import com.fuzhu8.inspector.plugin.Plugin;
 import com.fuzhu8.inspector.root.LineListener;
 import com.fuzhu8.inspector.root.RootUtil;
@@ -139,10 +140,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import capstone.Arm;
@@ -195,7 +198,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		global.addCommandHelp("where", "where(msg?); -- print the stack trace to console");
 		// global.addCommandHelp("inspect", "inspect(data, label?); -- inspect bytes");
 		global.addCommandHelp("dc()", "dc(); -- discover runtime stack class loaders.");
-		global.addCommandHelp("hook", "hook(class, method, ..., callback?); -- hook api, method = nil means constructor, method = '*' means all constructor and method.",
+		global.addCommandHelp("hook", "hook(class, method, ..., callback?); -- hook api, method = nil means constructor, method = '*' means all constructor and method, method = '@' means all native constructor and methods.",
 				"hook(\"java.lang.String\", \"equalsIgnoreCase\", \"java.lang.String\", function(old, thisObj, ...)",
 				"    local ret = old:call(thisObj, ...);",
 				"    log(\"equalsIgnoreCase thisObj=\" .. thisObj .. \", ret=\" .. tostring(ret));",
@@ -268,7 +271,34 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 		inspector.addCommandHelp("inspector:startPcap()", "inspector:startPcap(); -- Request start pcap, require root");
 		inspector.addCommandHelp("inspector:frida()", "inspector:frida(); -- Load frida gadget");
+		inspector.addCommandHelp("inspector:enableRegisterScript()", "inspector:enableRegisterScript(); -- Enable register boot script");
+		inspector.addCommandHelp("inspector:deregisterScript()", "inspector:deregisterScript(); -- Deregister boot script");
 		// inspector.addCommandHelp("inspector:stopPcap()", "inspector:stopPcap(); -- Request stop pcap");
+	}
+
+	private static File getBootRegisterScriptFile(Context context) {
+		return new File(context.getFilesDir(), "inspector_boot_script.lua");
+	}
+
+	private boolean pendingEnableRegisterBootScript;
+	private boolean enableRegisterBootScript;
+
+	@SuppressWarnings("unused")
+	private void enableRegisterScript() {
+		pendingEnableRegisterBootScript = true;
+	}
+
+	@SuppressWarnings("unused")
+	private void deregisterScript() {
+		enableRegisterBootScript = false;
+
+		if (appContext != null) {
+			File file = getBootRegisterScriptFile(appContext);
+			try {
+				println("Deregister boot script: \n" + FileUtils.readFileToString(file, "UTF-8"));
+			} catch (IOException ignored) {}
+			FileUtils.deleteQuietly(file);
+		}
 	}
 
 	@SuppressWarnings("unused")
@@ -700,6 +730,18 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			println('\n' + script);
 			luaScriptManager.eval(script);
 			println("eval lua script successfully!");
+
+			if (appContext != null && enableRegisterBootScript) {
+				File file = getBootRegisterScriptFile(appContext);
+				FileUtils.writeStringToFile(file, script + "\n", "UTF-8", true);
+				println("Register boot script: \n" + script);
+			}
+
+			if (pendingEnableRegisterBootScript) {
+				pendingEnableRegisterBootScript = false;
+				enableRegisterBootScript = true;
+				println("Enable register boot script");
+			}
 		} catch (Throwable e) {
 			err_println("evalLuaScript lua=\n" + script);
 			println(e);
@@ -1955,6 +1997,36 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		try {
+			Method method = Runtime.class.getDeclaredMethod("doLoad", String.class, ClassLoader.class);
+			context.getHooker().hookMethod(method, new MethodHookAdapter() {
+				private final Set<String> loadedSet = new HashSet<>();
+				@Override
+				public void afterHookedMethod(MethodHookParam param) throws Throwable {
+					super.afterHookedMethod(param);
+
+					String error = (String) param.getResult();
+					String filename = (String) param.args[0];
+					if (error == null && filename != null) {
+						List<NativeLibraryMapInfo> maps = NativeLibraryMapInfo.readNativeLibraryMapInfo();
+						for (NativeLibraryMapInfo map : maps) {
+							if (filename.equals(map.getLibraryName())) {
+								String key = filename + "0x" + Long.toHexString(map.getStartAddress());
+								if (loadedSet.add(key)) {
+									ClassLoader loader = (ClassLoader) param.args[1];
+									for (Plugin plugin : context.getPlugins()) {
+										plugin.onNativeLoad(new LoadedModule(filename, map.getStartAddress(), (int) (map.getEndAddress() - map.getStartAddress())), loader);
+									}
+								}
+							}
+						}
+					}
+				}
+			});
+		} catch (NoSuchMethodException e) {
+			log(e);
+		}
+
+		try {
 			hook(Thread.class, "suspend");
 		} catch (NoSuchMethodException e) {
 			log(e);
@@ -2155,6 +2227,14 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 		try {
 			luaScriptManager.registerGlobalObject("context", application);
+
+			File file = getBootRegisterScriptFile(appContext);
+			try {
+				String lua = FileUtils.readFileToString(file, "UTF-8");
+				if (!StringUtils.isEmpty(lua)) {
+					luaScriptManager.eval(lua);
+				}
+			} catch(IOException ignored) {}
 		} catch (Exception e) {
 			println(e);
 		}

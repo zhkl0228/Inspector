@@ -29,6 +29,9 @@
             android:name="xposedmodule"
             android:value="true"/>
         <meta-data
+            android:name="bridgemodule"
+            android:value="true"/>
+        <meta-data
             android:name="xposedminversion"
             android:value="54+"/>
         <meta-data

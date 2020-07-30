@@ -25,6 +25,6 @@ public class LibraryAbi {
 		return abi;
 	}
 	
-	public long lastApkModified;
+	public long lastApkModified = -1;
 
 }

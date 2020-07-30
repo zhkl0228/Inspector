@@ -83,33 +83,32 @@ public class SSLProxy implements Runnable {
         SSLSocket socket = null;
         SSLServerSocket serverSocket = null;
         try {
-            app = new Socket();
-            app.bind(null);
-            vpnService.protect(app);
-            app.setSoTimeout(10000);
-            app.connect(new InetSocketAddress(InetAddress.getByName(packet.daddr), packet.dport), 3000);
+            SSLContext context = SSLContext.getInstance("TLS");
             X509TrustManager trustManager = new X509TrustManager() {
                 @Override
                 public X509Certificate[] getAcceptedIssuers() {
-                    return null;
+                    return new X509Certificate[0];
                 }
-
                 @SuppressLint("TrustAllX509TrustManager")
                 @Override
                 public void checkServerTrusted(X509Certificate[] chain,
                                                String authType) {
                 }
-
                 @SuppressLint("TrustAllX509TrustManager")
                 @Override
                 public void checkClientTrusted(X509Certificate[] chain,
                                                String authType) {
                 }
             };
-            SSLContext context = SSLContext.getInstance("TLS");
             context.init(null, new TrustManager[]{trustManager}, new SecureRandom());
+
+            app = new Socket();
+            app.bind(null);
+            app.setSoTimeout(10000);
+            vpnService.protect(app);
+            app.connect(new InetSocketAddress(InetAddress.getByName(packet.daddr), packet.dport), 5000);
+
             socket = (SSLSocket) context.getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
-            socket.setSoTimeout(10000);
             final CountDownLatch countDownLatch = new CountDownLatch(1);
             socket.addHandshakeCompletedListener(new HandshakeCompletedListener() {
                 @Override
@@ -130,8 +129,8 @@ public class SSLProxy implements Runnable {
                 throw new IllegalStateException("handshake failed");
             }
 
-            SSLContext sslContext = proxyCertMap.get(peerCertificate);
-            if (sslContext == null) {
+            SSLContext serverContext = proxyCertMap.get(peerCertificate);
+            if (serverContext == null) {
                 KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "SC");
                 keyPairGenerator.initialize(0x400, new SecureRandom());
                 KeyPair keyPair = keyPairGenerator.generateKeyPair();
@@ -149,13 +148,13 @@ public class SSLProxy implements Runnable {
                 KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                 keyManagerFactory.init(keyStore, password);
 
-                sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
-                sslContext.getServerSessionContext().setSessionTimeout(10);
-                proxyCertMap.put(peerCertificate, sslContext);
+                serverContext = SSLContext.getInstance("TLS");
+                serverContext.init(keyManagerFactory.getKeyManagers(), null, null);
+                serverContext.getServerSessionContext().setSessionTimeout(10);
+                proxyCertMap.put(peerCertificate, serverContext);
             }
 
-            SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
+            SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
             serverSocket = (SSLServerSocket) factory.createServerSocket(0);
             serverSocket.setSoTimeout(10000);
             serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);

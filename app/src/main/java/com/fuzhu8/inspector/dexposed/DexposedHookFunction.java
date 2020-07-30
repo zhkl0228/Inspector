@@ -7,6 +7,7 @@ import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.script.hook.HookFunction;
 import com.fuzhu8.inspector.script.hook.HookFunctionRequest;
 import com.taobao.android.dexposed.DexposedBridge;
+import com.taobao.android.dexposed.XC_MethodHook;
 
 import org.keplerproject.luajava.LuaObject;
 import org.keplerproject.luajava.LuaState;
@@ -15,14 +16,14 @@ import org.keplerproject.luajava.LuaState;
  * @author zhkl0228
  *
  */
-public class DexposedHookFunction extends HookFunction implements ClassLoaderListener {
+public class DexposedHookFunction extends HookFunction<XC_MethodHook> implements ClassLoaderListener {
 
 	DexposedHookFunction(LuaState L, Inspector inspector, DexFileManager dexFileManager, ModuleContext context) {
 		super(L, inspector, dexFileManager, context);
 	}
 
 	@Override
-	protected HookFunctionRequest createHookFunctionRequest(String clazz, String method, LuaObject callback,
+	protected HookFunctionRequest<XC_MethodHook> createHookFunctionRequest(String clazz, String method, LuaObject callback,
 			String[] params) {
 		return new DexposedHookFunctionRequest(clazz, method, callback, context.getHooker(), params);
 	}

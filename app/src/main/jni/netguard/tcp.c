@@ -1038,10 +1038,13 @@ int open_tcp_socket(const struct arguments *args,
     // Build target address
     struct sockaddr_in addr4;
     struct sockaddr_in6 addr6;
+    char ip[64];
+    char buf[256];
+    memset(buf, 0, 256);
     if (redirect == NULL) {
         if (*socks5_addr && socks5_port) {
-            log_android(ANDROID_LOG_WARN, "TCP%d SOCKS5 to %s/%u",
-                        version, socks5_addr, socks5_port);
+            sprintf(buf, "TCP%d SOCKS5 to %s/%u", version, socks5_addr, socks5_port);
+            log_android(ANDROID_LOG_WARN, "%s", buf);
 
             if (version == 4) {
                 addr4.sin_family = AF_INET;
@@ -1057,15 +1060,17 @@ int open_tcp_socket(const struct arguments *args,
                 addr4.sin_family = AF_INET;
                 addr4.sin_addr.s_addr = (__be32) cur->daddr.ip4;
                 addr4.sin_port = cur->dest;
+                sprintf(buf, "%s/%u", inet_ntop(AF_INET, &addr4.sin_addr, ip, 64), ntohs(addr4.sin_port));
             } else {
                 addr6.sin6_family = AF_INET6;
                 memcpy(&addr6.sin6_addr, &cur->daddr.ip6, 16);
                 addr6.sin6_port = cur->dest;
+                sprintf(buf, "%s/%u", inet_ntop(AF_INET6, &addr6.sin6_addr, ip, 64), ntohs(addr6.sin6_port));
             }
         }
     } else {
-        log_android(ANDROID_LOG_WARN, "TCP%d redirect to %s/%u",
-                    version, redirect->raddr, redirect->rport);
+        sprintf(buf, "TCP%d redirect to %s/%u", version, redirect->raddr, redirect->rport);
+        log_android(ANDROID_LOG_WARN, "%s", buf);
 
         if (version == 4) {
             addr4.sin_family = AF_INET;
@@ -1086,7 +1091,7 @@ int open_tcp_socket(const struct arguments *args,
                                    ? sizeof(struct sockaddr_in)
                                    : sizeof(struct sockaddr_in6)));
     if (err < 0 && errno != EINPROGRESS) {
-        log_android(ANDROID_LOG_ERROR, "connect error %d: %s", errno, strerror(errno));
+        log_android(ANDROID_LOG_ERROR, "connect error %d: %s (%s)", errno, strerror(errno), buf);
         return -1;
     }
 

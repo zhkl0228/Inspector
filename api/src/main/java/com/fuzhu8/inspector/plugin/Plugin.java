@@ -20,6 +20,8 @@ public interface Plugin extends ClientConnectListener {
 
 	void onAttachApplication(Application application);
 
+	void onNativeLoad(LoadedModule module, ClassLoader loader);
+
 	void defineClass(ClassLoader classLoader, Class<?> clazz);
 
 	String getHelpContent();

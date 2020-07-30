@@ -22,7 +22,7 @@ import java.util.Set;
  * @author zhkl0228
  *
  */
-public abstract class HookFunction extends InspectorFunction implements ClassLoaderListener {
+public abstract class HookFunction<T> extends InspectorFunction implements ClassLoaderListener {
 	
 	private final DexFileManager dexFileManager;
 	private final Set<Member> hookedSet = new HashSet<>();
@@ -55,18 +55,18 @@ public abstract class HookFunction extends InspectorFunction implements ClassLoa
 				types = new String[params.length];
 			}
 			for(int i = 0; i < types.length; i++) {
-				types[i] = params[i].getString();
+				types[i] = params[i].getString().replace('/', '.');
 			}
 			
-			executeHook(clazz, method, callback, types);
+			executeHook(clazz.replace('/', '.'), method, callback, types);
 		}
 		return 0;
 	}
 	
-	private final List<HookFunctionRequest> hookList = new ArrayList<>();
+	private final List<HookFunctionRequest<T>> hookList = new ArrayList<>();
 
 	private void executeHook(String clazz, String method, LuaObject callback, String...params) {
-		HookFunctionRequest request = createHookFunctionRequest(clazz, method, callback, params);
+		HookFunctionRequest<T> request = createHookFunctionRequest(clazz, method, callback, params);
 		hookList.add(request);
 		List<ClassNotFoundException> exceptions = new ArrayList<>();
 		boolean successfully = false;
@@ -106,12 +106,12 @@ public abstract class HookFunction extends InspectorFunction implements ClassLoa
 		}
 	}
 
-	protected abstract HookFunctionRequest createHookFunctionRequest(String clazz, String method, LuaObject callback,
+	protected abstract HookFunctionRequest<T> createHookFunctionRequest(String clazz, String method, LuaObject callback,
 			String[] params);
 
 	@Override
 	public final void notifyClassLoader(ClassLoader classLoader) {
-		for(HookFunctionRequest request : hookList) {
+		for(HookFunctionRequest<?> request : hookList) {
 			try {
 				request.tryHook(classLoader, inspector, dexFileManager, hookedSet);
 			} catch(Throwable t) {

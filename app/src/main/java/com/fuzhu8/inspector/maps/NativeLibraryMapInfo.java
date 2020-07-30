@@ -128,11 +128,9 @@ public final class NativeLibraryMapInfo {
 
     @Override
 	public String toString() {
-    	StringBuffer buffer = new StringBuffer();
-    	buffer.append("[0x").append(Long.toHexString(mStartAddr));
-    	buffer.append('-').append("0x").append(Long.toHexString(mEndAddr));
-    	buffer.append("]").append(mLibrary);
-		return buffer.toString();
+        return "[0x" + Long.toHexString(mStartAddr) +
+                '-' + "0x" + Long.toHexString(mEndAddr) +
+                "]" + mLibrary;
 	}
     
     public static NativeLibraryMapInfo readNativeLibrary(String path) throws IOException {

@@ -809,4 +809,8 @@ public abstract class AbstractPlugin implements Plugin {
 		}
 	}
 
+	@Override
+	public void onNativeLoad(LoadedModule module, ClassLoader loader) {
+	}
+
 }

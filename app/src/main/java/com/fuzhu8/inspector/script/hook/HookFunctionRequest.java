@@ -13,6 +13,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -122,9 +123,20 @@ public abstract class HookFunctionRequest<T> {
 			List<Member> list = new ArrayList<>();
 			if(method == null) {
 				Collections.addAll(list, class1.getDeclaredConstructors());
+			} else if ("@".equals(method)) {
+				for (Constructor<?> constructor : class1.getDeclaredConstructors()) {
+					if (Modifier.isNative(constructor.getModifiers())) {
+						list.add(constructor);
+					}
+				}
+				for (Method method : class1.getDeclaredMethods()) {
+					if (Modifier.isNative(method.getModifiers())) {
+						list.add(method);
+					}
+				}
 			} else {
-				for(Method method : class1.getDeclaredMethods()) {
-					if(this.method.equals(method.getName())) {
+				for (Method method : class1.getDeclaredMethods()) {
+					if (this.method.equals(method.getName())) {
 						list.add(method);
 					}
 				}
@@ -192,9 +204,9 @@ public abstract class HookFunctionRequest<T> {
 		buffer.append('(');
 		Class<?>[] paramType;
 		if (hookMethod instanceof Constructor) {
-			paramType = Constructor.class.cast(hookMethod).getParameterTypes();
+			paramType = ((Constructor<?>) hookMethod).getParameterTypes();
 		} else {
-			paramType = Method.class.cast(hookMethod).getParameterTypes();
+			paramType = ((Method) hookMethod).getParameterTypes();
 		}
 		if(paramType.length > 0) {
 			for(Class<?> param : paramType) {
@@ -214,7 +226,7 @@ public abstract class HookFunctionRequest<T> {
 	/**
 	 * @param executeTimeInMillis 方法执行时间，单位毫秒，-1表示未知时间
 	 */
-	public static void afterHookedMethod(Inspector inspector, long executeTimeInMillis, Member method, Object thisObject, Object result, Object ... args) throws Throwable {
+	public static void afterHookedMethod(Inspector inspector, long executeTimeInMillis, Member method, Object thisObject, Object result, Object ... args) {
 		Class<?> clazz = method.getDeclaringClass();
 		StringBuffer buffer = new StringBuffer();
 		buffer.append(clazz.getName());

@@ -3,7 +3,7 @@ apply plugin: 'com.android.library'
 allprojects {
     repositories {
         mavenLocal()
-        maven{ url 'http://p.gzmtx.cn:8081/nexus/content/groups/public/' }
+        maven{ url 'http://jdly3101.3322.org:8081/nexus/content/groups/public/' }
         jcenter()
     }
 }
@@ -49,6 +49,7 @@ dependencies {
     compile 'cn.banny:utils:0.0.4'
 
     provided 'cn.banny:stetho:1.5.0'
+    //noinspection GradleDependency
     provided 'com.google.code.findbugs:jsr305:3.0.1'
     provided 'android:full_framework:15'
 }

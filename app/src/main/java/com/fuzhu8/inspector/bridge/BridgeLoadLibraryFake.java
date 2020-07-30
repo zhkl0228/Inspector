@@ -6,6 +6,7 @@ import com.fuzhu8.inspector.LoadLibraryFake;
 import com.fuzhu8.inspector.ModuleContext;
 import com.fuzhu8.inspector.advisor.AbstractHookHandler;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 
