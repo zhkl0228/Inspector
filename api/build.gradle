@@ -29,14 +29,14 @@ android {
 }
 
 dependencies {
-    compile('com.fuzhu8:tcpcap:1.1.2') {
+    compile('com.github.zhkl0228:tcpcap:1.1.2') {
         exclude group: '*'
     }
 
-    compile('org.krakenapps:kraken-pcap:1.7.1') {
+    compile('com.github.zhkl0228:kraken-pcap:1.7.1') {
         exclude group: '*'
     }
-    compile('org.krakenapps:kraken-http-decoder:1.1.0') {
+    compile('com.github.zhkl0228:kraken-http-decoder:1.1.0') {
         exclude group: '*'
     }
 
