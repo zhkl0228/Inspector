@@ -96,4 +96,8 @@
     <string name="pref_vpn_debug_sum">是否打开VpnDebug开关</string>
     <string name="pref_vpn_debug_title">VpnDebug</string>
 
+    <string name="pref_ssl_ports_sum">SSL端口列表</string>
+    <string name="pref_ssl_ports_dialogTitle">输入SSL端口列表，英文逗号分隔</string>
+    <string name="pref_ssl_ports_title">SSL Port</string>
+
 </resources>

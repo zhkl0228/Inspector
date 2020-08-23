@@ -66,7 +66,8 @@ public class LauncherPreferenceFragment extends PreferenceFragment {
 
 	// private EditTextPreference vpnHost, vpnPort, vpnPassword;
 	private CheckBoxPreference enabledSocks;
-	private EditTextPreference socksHost, socksPort;
+	private EditTextPreference socksHost;
+	private EditTextPreference socksPort;
 
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -145,7 +146,7 @@ public class LauncherPreferenceFragment extends PreferenceFragment {
 		vpn.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
 			@Override
 			public boolean onPreferenceChange(Preference preference, Object newValue) {
-				Boolean b = Boolean.class.cast(newValue);
+				Boolean b = (Boolean) newValue;
 				if (!b) {
 					Intent intent = new Intent(InspectorBroadcastListener.REQUEST_STOP_VPN);
 					getActivity().sendBroadcast(intent);

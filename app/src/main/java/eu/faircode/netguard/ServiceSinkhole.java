@@ -46,6 +46,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
@@ -531,11 +532,31 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
     private X509Certificate rootCert;
     private PrivateKey privateKey;
+    private int[] sslPorts = new int[0];
+
+    private void updateSSLPorts() {
+        SharedPreferences preferences = getSharedPreferences("com.fuzhu8.inspector_preferences", Context.MODE_PRIVATE);
+        String sslPorts = preferences.getString("pref_ssl_ports", "443");
+        String[] ports = sslPorts.split(",");
+        List<Integer> list = new ArrayList<>();
+        for (String p : ports) {
+            try { list.add(Integer.parseInt(p.trim())); } catch(NumberFormatException ignored) {}
+        }
+        if (list.isEmpty()) {
+            list.add(443);
+        }
+        this.sslPorts = new int[list.size()];
+        for (int i = 0; i < this.sslPorts.length; i++) {
+            this.sslPorts[i] = list.get(i);
+        }
+        Arrays.sort(this.sslPorts);
+    }
 
     @Override
     public void onCreate() {
         jni_context = jni_init(Build.VERSION.SDK_INT);
-        Log.d(TAG, "onCreate context=0x" + Long.toHexString(jni_context) + ", obj=" + this);
+        updateSSLPorts();
+        Log.d(TAG, "onCreate context=0x" + Long.toHexString(jni_context) + ", obj=" + this + ", sslPorts=" + Arrays.toString(sslPorts));
 
         super.onCreate();
 
@@ -737,7 +758,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                     }
                 }
 
-                if (packet.protocol == 6 && packet.version == 4 && packet.uid == uid && packet.isSSL()) { // ipv4
+                if (packet.protocol == 6 && packet.version == 4 && packet.uid == uid && packet.isSSL(sslPorts)) { // ipv4
                     allowed = mitm(packet);
                 }
 

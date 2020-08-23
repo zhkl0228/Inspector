@@ -22,6 +22,7 @@ package eu.faircode.netguard;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 
 public class Packet {
 
@@ -41,8 +42,8 @@ public class Packet {
         super();
     }
 
-    final boolean isSSL() {
-        return dport == 443 || dport == 8443;
+    final boolean isSSL(int[] sslPorts) {
+        return dport == 443 || Arrays.binarySearch(sslPorts, dport) != -1;
     }
 
     InetSocketAddress createClientAddress() throws UnknownHostException {

@@ -60,6 +60,14 @@
             android:key="switch_vpn"
             android:persistent="true"
             android:title="VPN Sniffer"/>
+        <EditTextPreference
+            android:dialogTitle="@string/pref_ssl_ports_dialogTitle"
+            android:inputType="textUri"
+            android:key="pref_ssl_ports"
+            android:summary="@string/pref_ssl_ports_sum"
+            android:defaultValue="443"
+            android:title="@string/pref_ssl_ports_title">
+        </EditTextPreference>
         <!--<CheckBoxPreference
             android:defaultValue="false"
             android:key="pref_vpn_debug"
