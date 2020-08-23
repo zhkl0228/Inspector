@@ -19,6 +19,8 @@ package eu.faircode.netguard;
     Copyright 2015-2018 by Marcel Bokhorst (M66B)
 */
 
+import java.net.InetSocketAddress;
+
 public class Packet {
 
     public long time;
@@ -39,6 +41,14 @@ public class Packet {
 
     final boolean isSSL() {
         return dport == 443 || dport == 8443;
+    }
+
+    InetSocketAddress createClientAddress() {
+        return new InetSocketAddress(saddr, sport);
+    }
+
+    InetSocketAddress createServerAddress() {
+        return new InetSocketAddress(daddr, dport);
     }
 
     @Override

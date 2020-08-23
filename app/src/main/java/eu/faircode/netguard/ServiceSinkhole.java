@@ -27,6 +27,7 @@ import com.fuzhu8.inspector.content.InspectorBroadcastListener;
 import com.fuzhu8.inspector.content.InspectorBroadcastReceiver;
 import com.fuzhu8.inspector.vpn.IPacketCapture;
 import com.fuzhu8.inspector.vpn.InspectVpnService;
+import com.fuzhu8.inspector.vpn.InspectorVpn;
 import com.fuzhu8.tcpcap.PcapDLT;
 
 import java.io.IOException;
@@ -56,7 +57,7 @@ import cn.banny.utils.StringUtils;
  * Created by zhkl0228 on 2017/3/21.
  */
 
-public class ServiceSinkhole extends VpnService implements InspectorBroadcastListener {
+public class ServiceSinkhole extends VpnService implements InspectorBroadcastListener, InspectorVpn {
 
     private static final int MSG_SERVICE_INTENT = 0;
 
@@ -301,7 +302,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         System.loadLibrary("netguard");
     }
 
-    static final String TAG = "ServiceSinkhole";
+    public static final String TAG = "ServiceSinkhole";
 
     private final BroadcastReceiver broadcastReceiver;
 
@@ -723,6 +724,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         }
 
         Allowed allowed = null;
+        long start = System.currentTimeMillis();
         if (packet.allowed) {
             TcpRedirectRule[] rules = this.redirectRules;
             if (packet.protocol == 6 /* TCP */ && packet.uid == uid && rules != null) {
@@ -749,14 +751,14 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             }
         }
 
-        Log.d(TAG, "isAddressAllowed allowed=" + allowed + ", packet: " + packet);
+        Log.d(TAG, "isAddressAllowed allowed=" + allowed + ", packet: " + packet + ", offset=" + (System.currentTimeMillis() - start) + "ms");
 
         return allowed;
     }
 
     private Allowed mitm(Packet packet) {
         try {
-            return new SSLProxy(this, rootCert, privateKey, packet, packetCapture).startProxy();
+            return SSLProxy.create(this, rootCert, privateKey, packet).startProxy();
         } catch (Exception e) {
             Log.d(TAG, "mitm failed: " + packet, e);
             return null;
@@ -854,4 +856,8 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         context.startService(intent);
     }
 
+    @Override
+    public IPacketCapture getPacketCapture() {
+        return packetCapture;
+    }
 }
