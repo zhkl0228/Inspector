@@ -129,6 +129,10 @@ public class SSLProxy implements Runnable {
                 serverSocket.setSoTimeout(30000);
                 serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
                 this.serverSocket = serverSocket;
+
+                Thread thread = new Thread(this, packet.toString());
+                thread.setDaemon(true);
+                thread.start();
             } catch (Exception e) {
                 canStop = true;
                 proxyMap.remove(packet.createClientAddress());
@@ -141,15 +145,7 @@ public class SSLProxy implements Runnable {
         }
     }
 
-    private boolean started;
-
-    final synchronized Allowed startProxy() {
-        if (!started) {
-            Thread thread = new Thread(this, packet.toString());
-            thread.setDaemon(true);
-            thread.start();
-            started = true;
-        }
+    final synchronized Allowed redirect() {
         return new Allowed("127.0.0.1", serverSocket.getLocalPort());
     }
 
