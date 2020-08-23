@@ -19,7 +19,9 @@ package eu.faircode.netguard;
     Copyright 2015-2018 by Marcel Bokhorst (M66B)
 */
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 
 public class Packet {
 
@@ -43,12 +45,12 @@ public class Packet {
         return dport == 443 || dport == 8443;
     }
 
-    InetSocketAddress createClientAddress() {
-        return new InetSocketAddress(saddr, sport);
+    InetSocketAddress createClientAddress() throws UnknownHostException {
+        return new InetSocketAddress(InetAddress.getByName(saddr), sport);
     }
 
-    InetSocketAddress createServerAddress() {
-        return new InetSocketAddress(daddr, dport);
+    InetSocketAddress createServerAddress() throws UnknownHostException {
+        return new InetSocketAddress(InetAddress.getByName(daddr), dport);
     }
 
     @Override

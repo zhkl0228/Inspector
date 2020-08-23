@@ -14,6 +14,7 @@ import org.spongycastle.operator.OperatorCreationException;
 import org.spongycastle.operator.jcajce.JcaContentSignerBuilder;
 
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -38,6 +39,7 @@ import eu.faircode.netguard.ServiceSinkhole;
 public class ServerCertificate {
 
     private static Map<X509Certificate, SSLContext> proxyCertMap = new ConcurrentHashMap<>();
+    private static Map<InetSocketAddress, SSLContext> serverSSLContextMap = new ConcurrentHashMap<>();
 
     private final X509Certificate peerCertificate;
 
@@ -45,7 +47,11 @@ public class ServerCertificate {
         this.peerCertificate = peerCertificate;
     }
 
-    public SSLContext createSSLContext(X509Certificate rootCert, PrivateKey privateKey) throws Exception {
+    public static SSLContext getSSLContext(InetSocketAddress serverAddress) {
+        return serverSSLContextMap.get(serverAddress);
+    }
+
+    public SSLContext createSSLContext(X509Certificate rootCert, PrivateKey privateKey, InetSocketAddress serverAddress) throws Exception {
         SSLContext serverContext = proxyCertMap.get(peerCertificate);
         if (serverContext == null) {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "SC");
@@ -69,6 +75,7 @@ public class ServerCertificate {
             serverContext.init(keyManagerFactory.getKeyManagers(), null, null);
             serverContext.getServerSessionContext().setSessionTimeout(10);
             proxyCertMap.put(peerCertificate, serverContext);
+            serverSSLContextMap.put(serverAddress, serverContext);
         }
         return serverContext;
     }

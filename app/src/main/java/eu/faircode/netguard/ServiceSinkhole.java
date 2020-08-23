@@ -725,24 +725,28 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
         Allowed allowed = null;
         long start = System.currentTimeMillis();
-        if (packet.allowed) {
-            TcpRedirectRule[] rules = this.redirectRules;
-            if (packet.protocol == 6 /* TCP */ && packet.uid == uid && rules != null) {
-                for (TcpRedirectRule rule : rules) {
-                    allowed = rule.createRedirect(packet);
-                    if (allowed != null) {
-                        break;
+        try {
+            if (packet.allowed) {
+                TcpRedirectRule[] rules = this.redirectRules;
+                if (packet.protocol == 6 /* TCP */ && packet.uid == uid && rules != null) {
+                    for (TcpRedirectRule rule : rules) {
+                        allowed = rule.createRedirect(packet);
+                        if (allowed != null) {
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (packet.protocol == 6 && packet.version == 4 && packet.uid == uid && packet.isSSL()) { // ipv4
-                allowed = mitm(packet);
-            }
+                if (packet.protocol == 6 && packet.version == 4 && packet.uid == uid && packet.isSSL()) { // ipv4
+                    allowed = mitm(packet);
+                }
 
-            if (allowed == null) {
-                allowed = new Allowed();
+                if (allowed == null) {
+                    allowed = new Allowed();
+                }
             }
+        } catch (Exception e) {
+            Log.d(TAG, "mitm failed: " + packet, e);
         }
 
         if (allowed != null) {
@@ -756,13 +760,8 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         return allowed;
     }
 
-    private Allowed mitm(Packet packet) {
-        try {
-            return SSLProxy.create(this, rootCert, privateKey, packet).redirect();
-        } catch (Exception e) {
-            Log.d(TAG, "mitm failed: " + packet, e);
-            return null;
-        }
+    private Allowed mitm(Packet packet) throws Exception {
+        return SSLProxy.create(this, rootCert, privateKey, packet).redirect();
     }
 
     // Called from native code
