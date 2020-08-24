@@ -45,6 +45,7 @@ public class SSLProxy implements Runnable {
     }
 
     private static final int RECEIVE_BUFFER_SIZE = 0x2000;
+    private static final int SERVER_SO_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(30);
 
     private SSLSocket socket;
     private final SSLServerSocket serverSocket;
@@ -79,7 +80,7 @@ public class SSLProxy implements Runnable {
 
             SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
             SSLServerSocket serverSocket = (SSLServerSocket) factory.createServerSocket(0);
-            serverSocket.setSoTimeout(30000);
+            serverSocket.setSoTimeout(SERVER_SO_TIMEOUT);
             serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
             this.serverSocket = serverSocket;
 
@@ -105,7 +106,7 @@ public class SSLProxy implements Runnable {
                 SSLContext serverContext = serverCertificate.createSSLContext(rootCert, privateKey, packet.createServerAddress());
                 SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
                 serverSocket = (SSLServerSocket) factory.createServerSocket(0);
-                serverSocket.setSoTimeout(30000);
+                serverSocket.setSoTimeout(SERVER_SO_TIMEOUT);
                 serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
                 this.serverSocket = serverSocket;
 
@@ -146,9 +147,9 @@ public class SSLProxy implements Runnable {
 
             app = new Socket();
             app.bind(null);
-            app.setSoTimeout(15000);
+            app.setSoTimeout(10000);
             vpn.protect(app);
-            app.connect(packet.createServerAddress(), 15000);
+            app.connect(packet.createServerAddress(), 5000);
 
             socket = (SSLSocket) context.getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
             final CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -167,7 +168,7 @@ public class SSLProxy implements Runnable {
             });
             Log.d(ServiceSinkhole.TAG, "startHandshake socket=" + socket);
             socket.startHandshake();
-            countDownLatch.await(30, TimeUnit.SECONDS);
+            countDownLatch.await(15, TimeUnit.SECONDS);
             if (serverCertificate == null) {
                 throw new IllegalStateException("handshake failed");
             }
@@ -261,7 +262,7 @@ public class SSLProxy implements Runnable {
         SSLSocket local = null;
         try {
             local = (SSLSocket) serverSocket.accept();
-            local.setSoTimeout(30000);
+            local.setSoTimeout(15000);
 
             if (this.socket == null) {
                 this.socket = connectServer();
