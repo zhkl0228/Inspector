@@ -761,6 +761,10 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                 if (packet.protocol == 6 && packet.version == 4 && packet.uid == uid && packet.isSSL(sslPorts)) { // ipv4
                     allowed = mitm(packet);
                 }
+
+                if (extraUid > 0 && packet.uid == extraUid && allowed == null) {
+                    allowed = new Allowed();
+                }
             }
         } catch (Exception e) {
             Log.d(TAG, "mitm failed: " + packet, e);
