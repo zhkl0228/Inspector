@@ -44,7 +44,6 @@ public class SSLProxy implements Runnable {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(), 1);
     }
 
-    private static final int RECEIVE_BUFFER_SIZE = 0x2000;
     private static final int SERVER_SO_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(30);
 
     private SSLSocket socket;
@@ -81,7 +80,6 @@ public class SSLProxy implements Runnable {
             SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
             SSLServerSocket serverSocket = (SSLServerSocket) factory.createServerSocket(0);
             serverSocket.setSoTimeout(SERVER_SO_TIMEOUT);
-            serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
             this.serverSocket = serverSocket;
 
             Thread thread = new Thread(this, packet.toString());
@@ -107,7 +105,6 @@ public class SSLProxy implements Runnable {
                 SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
                 serverSocket = (SSLServerSocket) factory.createServerSocket(0);
                 serverSocket.setSoTimeout(SERVER_SO_TIMEOUT);
-                serverSocket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
                 this.serverSocket = serverSocket;
 
                 Thread thread = new Thread(this, packet.toString());
@@ -172,6 +169,7 @@ public class SSLProxy implements Runnable {
             if (serverCertificate == null) {
                 throw new IllegalStateException("handshake failed");
             }
+            app.setSoTimeout(0);
             return socket;
         } catch (Exception e) {
             IOUtils.closeQuietly(app);
@@ -184,24 +182,26 @@ public class SSLProxy implements Runnable {
         return new Allowed("127.0.0.1", serverSocket.getLocalPort());
     }
 
-    private boolean canStop;
+    private Throwable socketException;
 
     private class StreamForward implements Runnable {
         private final InputStream inputStream;
         private final OutputStream outputStream;
-        private final Socket socket;
         private final boolean send;
         private final String clientIp, serverIp;
         private final int clientPort, serverPort;
-        StreamForward(InputStream inputStream, OutputStream outputStream, Socket socket, boolean send, String clientIp, String serverIp, int clientPort, int serverPort) {
+        private final CountDownLatch countDownLatch;
+        private final Socket socket;
+        StreamForward(InputStream inputStream, OutputStream outputStream, boolean send, String clientIp, String serverIp, int clientPort, int serverPort, CountDownLatch countDownLatch, Socket socket) {
             this.inputStream = inputStream;
             this.outputStream = outputStream;
-            this.socket = socket;
             this.send = send;
             this.clientIp = clientIp;
             this.serverIp = serverIp;
             this.clientPort = clientPort;
             this.serverPort = serverPort;
+            this.countDownLatch = countDownLatch;
+            this.socket = socket;
 
             Thread thread = new Thread(this);
             thread.setDaemon(true);
@@ -209,20 +209,18 @@ public class SSLProxy implements Runnable {
         }
         @Override
         public void run() {
-            try {
-                doForward();
-            } catch (Throwable ignored) {
-            }
+            doForward();
         }
 
-        private void doForward() throws RemoteException {
+        private void doForward() {
             try {
-                byte[] buf = new byte[RECEIVE_BUFFER_SIZE];
+                byte[] buf = new byte[socket.getReceiveBufferSize()];
                 int read;
-                while (!canStop) {
+                while (socketException == null) {
                     try {
                         while ((read = inputStream.read(buf)) != -1) {
                             outputStream.write(buf, 0, read);
+                            outputStream.flush();
 
                             IPacketCapture packetCapture = vpn.getPacketCapture();
                             if (packetCapture != null) {
@@ -239,37 +237,33 @@ public class SSLProxy implements Runnable {
                             }
                         }
                         break;
-                    } catch (SocketTimeoutException ignored) {
-                    }
+                    } catch(SocketTimeoutException ignored) {}
                 }
-            } catch (IOException ignored) {
+            } catch (Throwable e) {
+                Log.w(ServiceSinkhole.TAG, "stream forward exception: socket=" + socket, e);
+                socketException = e;
             } finally {
                 IOUtils.closeQuietly(inputStream);
                 IOUtils.closeQuietly(outputStream);
-                IOUtils.closeQuietly(socket);
-
-                canStop = true;
-                IPacketCapture packetCapture = vpn.getPacketCapture();
-                if (packetCapture != null) {
-                    packetCapture.onSSLProxyFinish(clientIp, serverIp, clientPort, serverPort, send);
-                }
+                countDownLatch.countDown();
             }
         }
     }
 
+    private SSLSocket local;
+
     @Override
     public void run() {
-        SSLSocket local = null;
+        Runnable runnable = null;
         try {
             local = (SSLSocket) serverSocket.accept();
-            local.setSoTimeout(15000);
-
+            local.setSoTimeout(1000);
             if (this.socket == null) {
                 this.socket = connectServer();
             }
 
-            InetSocketAddress client = (InetSocketAddress) local.getRemoteSocketAddress();
-            InetSocketAddress server = (InetSocketAddress) socket.getRemoteSocketAddress();
+            final InetSocketAddress client = (InetSocketAddress) local.getRemoteSocketAddress();
+            final InetSocketAddress server = (InetSocketAddress) socket.getRemoteSocketAddress();
             InputStream localIn = local.getInputStream();
             OutputStream localOut = local.getOutputStream();
             InputStream socketIn = socket.getInputStream();
@@ -282,8 +276,26 @@ public class SSLProxy implements Runnable {
                 } catch (RemoteException ignored) {
                 }
             }
-            new StreamForward(localIn, socketOut, local, true, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
-            new StreamForward(socketIn, localOut, socket, false, client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
+            final CountDownLatch countDownLatch = new CountDownLatch(2);
+            new StreamForward(localIn, socketOut, true, client.getHostString(), server.getHostString(), client.getPort(), server.getPort(), countDownLatch, local);
+            new StreamForward(socketIn, localOut, false, client.getHostString(), server.getHostString(), client.getPort(), server.getPort(), countDownLatch, socket);
+            runnable = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        countDownLatch.await();
+
+                        IPacketCapture packetCapture = vpn.getPacketCapture();
+                        if (packetCapture != null) {
+                            packetCapture.onSSLProxyFinish(client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
+                        }
+                    } catch (InterruptedException | RemoteException ignored) {
+                    } finally {
+                        IOUtils.closeQuietly(socket);
+                        IOUtils.closeQuietly(local);
+                    }
+                }
+            };
         } catch (Exception e) {
             Log.d(ServiceSinkhole.TAG, "accept failed: " + packet + ", local_port=" + serverSocket.getLocalPort(), e);
 
@@ -293,6 +305,10 @@ public class SSLProxy implements Runnable {
             InetSocketAddress clientSocketAddress = new InetSocketAddress(packet.saddr, packet.sport);
             proxyMap.remove(clientSocketAddress);
             IOUtils.closeQuietly(serverSocket);
+        }
+
+        if (runnable != null) {
+            runnable.run();
         }
     }
 

@@ -18,6 +18,6 @@ interface IPacketCapture {
    	void onSSLProxyEstablish(in String clientIp, in String serverIp, int clientPort, int serverPort);
    	void onSSLProxyTX(in String clientIp, in String serverIp, int clientPort, int serverPort, in byte[] data);
    	void onSSLProxyRX(in String clientIp, in String serverIp, int clientPort, int serverPort, in byte[] data);
-   	void onSSLProxyFinish(in String clientIp, in String serverIp, int clientPort, int serverPort, boolean send);
+   	void onSSLProxyFinish(in String clientIp, in String serverIp, int clientPort, int serverPort);
 
 }

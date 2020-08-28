@@ -150,7 +150,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
             if (inspector.isDebug()) {
                 inspector.println("onSSLProxyEstablish key=" + key);
             }
-        } catch (UnknownHostException e) {
+        } catch (Exception e) {
             inspector.println(e);
         }
     }
@@ -169,7 +169,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
             if (inspector.isDebug()) {
                 inspector.inspect(data, "onSSLProxyTX key=" + key);
             }
-        } catch (UnknownHostException e) {
+        } catch (Exception e) {
             inspector.println(e);
         }
     }
@@ -188,13 +188,13 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
             if (inspector.isDebug()) {
                 inspector.inspect(data, "onSSLProxyRX key=" + key);
             }
-        } catch (UnknownHostException e) {
+        } catch (Exception e) {
             inspector.println(e);
         }
     }
 
     @Override
-    public synchronized void onSSLProxyFinish(String clientIp, String serverIp, int clientPort, int serverPort, boolean send) {
+    public synchronized void onSSLProxyFinish(String clientIp, String serverIp, int clientPort, int serverPort) {
         try {
             TcpSessionKey key = new TcpSessionKeyImpl(InetAddress.getByName(clientIp), InetAddress.getByName(serverIp), clientPort, serverPort);
 
@@ -205,9 +205,9 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
             }
 
             if (inspector.isDebug()) {
-                inspector.println("onSSLProxyFinish key=" + key + ", send=" + send);
+                inspector.println("onSSLProxyFinish key=" + key);
             }
-        } catch (UnknownHostException e) {
+        } catch (Exception e) {
             inspector.println(e);
         }
     }

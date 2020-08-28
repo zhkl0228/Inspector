@@ -542,9 +542,6 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         for (String p : ports) {
             try { list.add(Integer.parseInt(p.trim())); } catch(NumberFormatException ignored) {}
         }
-        if (list.isEmpty()) {
-            list.add(443);
-        }
         this.sslPorts = new int[list.size()];
         for (int i = 0; i < this.sslPorts.length; i++) {
             this.sslPorts[i] = list.get(i);
@@ -762,8 +759,11 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                     allowed = mitm(packet);
                 }
 
-                if (extraUid > 0 && packet.uid == extraUid && allowed == null) {
+                if (allowed == null) {
                     allowed = new Allowed();
+                }
+                if (packet.uid != uid) {
+                    return allowed;
                 }
             }
         } catch (Exception e) {

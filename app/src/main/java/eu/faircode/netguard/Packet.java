@@ -43,7 +43,10 @@ public class Packet {
     }
 
     final boolean isSSL(int[] sslPorts) {
-        return dport == 443 || Arrays.binarySearch(sslPorts, dport) != -1;
+        if (sslPorts == null || sslPorts.length == 0) {
+            sslPorts = new int[] { 443 };
+        }
+        return Arrays.binarySearch(sslPorts, dport) >= 0;
     }
 
     InetSocketAddress createClientAddress() throws UnknownHostException {
