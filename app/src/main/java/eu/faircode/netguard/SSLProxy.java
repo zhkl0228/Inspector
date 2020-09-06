@@ -44,8 +44,6 @@ public class SSLProxy implements Runnable {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(), 1);
     }
 
-    private static final int SERVER_SO_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(30);
-
     private SSLSocket socket;
     private final SSLServerSocket serverSocket;
     private final Packet packet;
@@ -76,19 +74,24 @@ public class SSLProxy implements Runnable {
 
         synchronized (this) {
             this.socket = null;
-
-            SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
-            SSLServerSocket serverSocket = (SSLServerSocket) factory.createServerSocket(0);
-            serverSocket.setSoTimeout(SERVER_SO_TIMEOUT);
-            this.serverSocket = serverSocket;
-
-            Thread thread = new Thread(this, packet.toString());
-            thread.setDaemon(true);
-            thread.start();
+            this.serverSocket = startSSLServerSocket(serverContext, this, packet);
         }
     }
 
+    private static final int SERVER_SO_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(30);
+
     private ServerCertificate serverCertificate;
+
+    private static SSLServerSocket startSSLServerSocket(SSLContext serverContext, SSLProxy proxy, Packet packet) throws IOException {
+        SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
+        SSLServerSocket serverSocket = (SSLServerSocket) factory.createServerSocket(0);
+        serverSocket.setSoTimeout(SERVER_SO_TIMEOUT);
+
+        Thread thread = new Thread(proxy, packet.toString());
+        thread.setDaemon(true);
+        thread.start();
+        return serverSocket;
+    }
 
     private SSLProxy(InspectorVpn vpn, X509Certificate rootCert, PrivateKey privateKey, Packet packet) throws Exception {
         this.vpn = vpn;
@@ -97,23 +100,13 @@ public class SSLProxy implements Runnable {
         proxyMap.put(clientAddress, this);
 
         synchronized (this) {
-            SSLServerSocket serverSocket = null;
             try {
                 this.socket = connectServer();
 
                 SSLContext serverContext = serverCertificate.createSSLContext(rootCert, privateKey, packet.createServerAddress());
-                SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
-                serverSocket = (SSLServerSocket) factory.createServerSocket(0);
-                serverSocket.setSoTimeout(SERVER_SO_TIMEOUT);
-                this.serverSocket = serverSocket;
-
-                Thread thread = new Thread(this, packet.toString());
-                thread.setDaemon(true);
-                thread.start();
+                this.serverSocket = startSSLServerSocket(serverContext, this, packet);
             } catch (Exception e) {
                 proxyMap.remove(clientAddress);
-
-                IOUtils.closeQuietly(serverSocket);
                 throw e;
             }
         }

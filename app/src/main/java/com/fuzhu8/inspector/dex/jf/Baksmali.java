@@ -57,7 +57,7 @@ import java.util.concurrent.Future;
 
 public class Baksmali {
 
-    public static SmaliFile[] disassembleDexFile(DexFile dexFile, File outputDir, final BaksmaliOptions options, String className, DexFileProvider dex) throws Exception {
+    public static SmaliFile[] disassembleDexFile(Inspector inspector, DexFile dexFile, File outputDir, final BaksmaliOptions options, String className, DexFileProvider dex) throws Exception {
     	List<? extends ClassDef> classDefs = setOptions(dexFile, outputDir);
 
         String prefix = 'L' + className.replace('.', '/');
@@ -83,9 +83,11 @@ public class Baksmali {
             
             if(binaryName.equals(classDescriptor) || classDescriptor.startsWith(innerClass)) { // me or inner
             	String name = classDescriptor.substring(1, classDescriptor.length() - 1).replace('/', '.');
-            	try {
+                try {
                     smalies.add(new SmaliFile(name, disassembleClass(classDef, options), dex));
-                } catch(Exception ignored) {}
+                } catch (Exception e) {
+                    inspector.println(new Exception("disassemble " + name + " failed", e));
+                }
             }
         }
 		return smalies.toArray(new SmaliFile[0]);

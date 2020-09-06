@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId "com.fuzhu8.inspector"
-        minSdkVersion 25
+        minSdkVersion 19
         //noinspection ExpiredTargetSdkVersion,OldTargetApi
         targetSdkVersion 25
         versionCode 260

@@ -143,7 +143,7 @@ public class DexFileData implements DexFile {
             options.classPath = loadClassPathForDexFile(fixDexFile, getDefaultBootClassPathForApi(Build.VERSION.SDK_INT), ImmutableList.<String>of());
             options.inlineResolver = null;
             
-            return Baksmali.disassembleDexFile(fixDexFile, smaliDir, options, className, dex);
+            return Baksmali.disassembleDexFile(inspector, fixDexFile, smaliDir, options, className, dex);
 		} catch(Throwable t) {
 			inspector.printStackTrace(t);
 			return null;
@@ -415,7 +415,7 @@ public class DexFileData implements DexFile {
             options.apiLevel = Build.VERSION.SDK_INT;
             options.inlineResolver = InlineMethodResolver.createInlineMethodResolver(odexFile.getOdexVersion());
             
-            return Baksmali.disassembleDexFile(odexFile, smaliDir, options, className, dex);
+            return Baksmali.disassembleDexFile(inspector, odexFile, smaliDir, options, className, dex);
 		} catch(Exception t) {
 			inspector.printStackTrace(t);
 			
