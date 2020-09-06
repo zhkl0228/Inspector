@@ -83,7 +83,9 @@ public class Baksmali {
             
             if(binaryName.equals(classDescriptor) || classDescriptor.startsWith(innerClass)) { // me or inner
             	String name = classDescriptor.substring(1, classDescriptor.length() - 1).replace('/', '.');
-            	smalies.add(new SmaliFile(name, disassembleClass(classDef, options), dex));
+            	try {
+                    smalies.add(new SmaliFile(name, disassembleClass(classDef, options), dex));
+                } catch(Exception ignored) {}
             }
         }
 		return smalies.toArray(new SmaliFile[0]);
