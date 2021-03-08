@@ -27,6 +27,8 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.UnrecoverableKeyException;
+import java.security.cert.CertPathValidator;
+import java.security.cert.CertPathValidatorResult;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +41,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import cn.android.bridge.AndroidBridge;
 import cn.android.bridge.XC_MethodHook;
 import cn.android.bridge.XC_MethodReplacement;
 
@@ -324,13 +327,26 @@ public class JustTrustMe {
             });
 
 
-            findAndHookMethod("com.android.org.conscrypt.TrustManagerImpl", classLoader, "checkTrusted", X509Certificate[].class, byte[].class, byte[].class, String.class, String.class, boolean.class, new XC_MethodReplacement() {
-                @Override
-                protected Object replaceHookedMethod(MethodHookParam param) {
-                    return new ArrayList<X509Certificate>();
-                }
-            });
+            try {
+                findAndHookMethod("com.android.org.conscrypt.TrustManagerImpl", classLoader, "checkTrusted", X509Certificate[].class, byte[].class, byte[].class, String.class, String.class, boolean.class, new XC_MethodReplacement() {
+                    @Override
+                    protected Object replaceHookedMethod(MethodHookParam param) {
+                        return new ArrayList<X509Certificate>();
+                    }
+                });
+            } catch(Throwable ignored) {
+                // pass
+            }
         }
+
+        Class<?> cCertPathValidator = CertPathValidator.class;
+        CertPathValidatorResult result = new CertPathValidatorResult() {
+            @Override
+            public Object clone() {
+                throw new UnsupportedOperationException();
+            }
+        };
+        AndroidBridge.hookAllMethods(cCertPathValidator, "validate", XC_MethodReplacement.returnConstant(result));
 
     } // End Hooks
 
@@ -338,7 +354,6 @@ public class JustTrustMe {
     // Check for TrustManagerImpl class
     @SuppressLint("PrivateApi")
     public boolean hasTrustManagerImpl() {
-
         try {
             Class.forName("com.android.org.conscrypt.TrustManagerImpl");
         } catch (ClassNotFoundException e) {
@@ -557,6 +572,7 @@ public class JustTrustMe {
 
         try {
             classLoader.loadClass("okhttp3.CertificatePinner");
+            classLoader.loadClass("kotlin.jvm.functions.Function0");
             findAndHookMethod("okhttp3.CertificatePinner",
                     classLoader,
                     "check$okhttp",
@@ -568,7 +584,7 @@ public class JustTrustMe {
                             return null;
                         }
                     });
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable e) {
             Log.d(TAG, "OKHTTP 4.2.0+ not found in " + currentPackageName + " -- not hooking");
             // pass
         }

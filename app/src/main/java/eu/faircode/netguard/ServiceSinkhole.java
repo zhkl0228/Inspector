@@ -196,11 +196,11 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     }
 
     private class Builder extends VpnService.Builder {
-        private NetworkInfo networkInfo;
+        private final NetworkInfo networkInfo;
         private int mtu;
-        private List<String> listAddress = new ArrayList<>();
-        private List<String> listRoute = new ArrayList<>();
-        private List<InetAddress> listDns = new ArrayList<>();
+        private final List<String> listAddress = new ArrayList<>();
+        private final List<String> listRoute = new ArrayList<>();
+        private final List<InetAddress> listDns = new ArrayList<>();
 
         private Builder() {
             super();
@@ -341,18 +341,18 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         Log.i(TAG, "vpn6=" + vpn6);
         builder.addAddress(vpn6, 128);
 
+        // Exclude IP ranges
+        List<IPUtil.CIDR> listExclude = new ArrayList<>();
+
         // DNS address
         for (InetAddress dns : getDns(ServiceSinkhole.this)) {
             if (dns instanceof Inet4Address) {
-                Log.i(TAG, "dns=" + dns);
+                Log.i(TAG, "dns=" + dns + ", address=" + dns.getHostAddress());
                 builder.addDnsServer(dns);
+                listExclude.add(new IPUtil.CIDR(dns.getHostAddress(), 24));
             }
         }
 
-        // Subnet routing
-
-        // Exclude IP ranges
-        List<IPUtil.CIDR> listExclude = new ArrayList<>();
         listExclude.add(new IPUtil.CIDR("127.0.0.0", 8)); // localhost
 
         // USB tethering 192.168.42.x
@@ -441,12 +441,13 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             InetAddress start = InetAddress.getByName("0.0.0.0");
             for (IPUtil.CIDR exclude : listExclude) {
                 Log.i(TAG, "Exclude " + exclude.getStart().getHostAddress() + "..." + exclude.getEnd().getHostAddress());
-                for (IPUtil.CIDR include : IPUtil.toCIDR(start, IPUtil.minus1(exclude.getStart())))
+                for (IPUtil.CIDR include : IPUtil.toCIDR(start, IPUtil.minus1(exclude.getStart()))) {
                     try {
                         builder.addRoute(include.address, include.prefix);
                     } catch (Throwable ex) {
                         Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
                     }
+                }
                 start = IPUtil.plus1(exclude.getEnd());
             }
             for (IPUtil.CIDR include : IPUtil.toCIDR("224.0.0.0", "255.255.255.255"))
