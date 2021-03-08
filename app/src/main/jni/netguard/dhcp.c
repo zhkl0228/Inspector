@@ -53,7 +53,7 @@ int check_dhcp(const struct arguments *args, const struct udp_session *u,
     // Ack: source: 10.1.10.1 destination: 255.255.255.255
 
     if (request->opcode == 1) { // Discover/request
-        struct dhcp_packet *response = calloc(500, 1);
+        struct dhcp_packet *response = ng_calloc(500, 1, "dhcp");
 
         // Hack
         inet_pton(AF_INET, "10.1.10.1", (void *) &u->saddr);
@@ -64,7 +64,6 @@ int check_dhcp(const struct arguments *args, const struct udp_session *u,
             DHCP option 50: 192.168.1.100 requested
             DHCP option 55: Parameter Request List:
             Request Subnet Mask (1), Router (3), Domain Name (15), Domain Name Server (6)
-
         Request
             DHCP option 53: DHCP Request
             DHCP option 50: 192.168.1.100 requested
@@ -136,7 +135,7 @@ int check_dhcp(const struct arguments *args, const struct udp_session *u,
 
         write_udp(args, u, (uint8_t *) response, 500);
 
-        free(response);
+        ng_free(response, __FILE__, __LINE__);
     }
 
     return 0;

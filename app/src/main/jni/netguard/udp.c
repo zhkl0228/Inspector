@@ -102,7 +102,7 @@ void check_udp_socket(const struct arguments *args, const struct epoll_event *ev
         if (ev->events & EPOLLIN) {
             s->udp.time = time(NULL);
 
-            uint8_t *buffer = malloc(s->udp.mss);
+            uint8_t *buffer = ng_malloc(s->udp.mss, "udp recv");
             ssize_t bytes = recv(s->socket, buffer, s->udp.mss, 0);
             if (bytes < 0) {
                 // Socket error
@@ -129,7 +129,7 @@ void check_udp_socket(const struct arguments *args, const struct epoll_event *ev
 
                 // Process DNS response
                 if (ntohs(s->udp.dest) == 53)
-                    parse_dns_response(args, &s->udp, buffer, (size_t *) &bytes);
+                    parse_dns_response(args, s, buffer, (size_t *) &bytes);
 
                 // Forward to tun
                 if (write_udp(args, &s->udp, buffer, (size_t) bytes) < 0)
@@ -140,7 +140,7 @@ void check_udp_socket(const struct arguments *args, const struct epoll_event *ev
                         s->udp.state = UDP_FINISHING;
                 }
             }
-            free(buffer);
+            ng_free(buffer, __FILE__, __LINE__);
         }
     }
 }
@@ -194,7 +194,7 @@ void block_udp(const struct arguments *args,
                 source, ntohs(udphdr->source), dest, ntohs(udphdr->dest));
 
     // Register session
-    struct ng_session *s = malloc(sizeof(struct ng_session));
+    struct ng_session *s = ng_malloc(sizeof(struct ng_session), "udp session block");
     s->protocol = IPPROTO_UDP;
 
     s->udp.time = time(NULL);
@@ -265,7 +265,7 @@ jboolean handle_udp(const struct arguments *args,
                     source, ntohs(udphdr->source), dest, ntohs(udphdr->dest));
 
         // Register session
-        struct ng_session *s = malloc(sizeof(struct ng_session));
+        struct ng_session *s = ng_malloc(sizeof(struct ng_session), "udp session");
         s->protocol = IPPROTO_UDP;
 
         s->udp.time = time(NULL);
@@ -298,7 +298,7 @@ jboolean handle_udp(const struct arguments *args,
         // Open UDP socket
         s->socket = open_udp_socket(args, &s->udp, redirect);
         if (s->socket < 0) {
-            free(s);
+            ng_free(s, __FILE__, __LINE__);
             return 0;
         }
 
@@ -316,37 +316,6 @@ jboolean handle_udp(const struct arguments *args,
 
         cur = s;
     }
-
-    // Check for DNS
-    if (ntohs(udphdr->dest) == 53) {
-        char qname[DNS_QNAME_MAX + 1];
-        uint16_t qtype;
-        uint16_t qclass;
-        if (get_dns_query(args, &cur->udp, data, datalen, &qtype, &qclass, qname) >= 0) {
-            log_android(ANDROID_LOG_DEBUG,
-                        "DNS query qtype %d qclass %d name %s",
-                        qtype, qclass, qname);
-
-            if (0)
-                if (check_domain(args, &cur->udp, data, datalen, qclass, qtype, qname)) {
-                    // Log qname
-                    char name[DNS_QNAME_MAX + 40 + 1];
-                    sprintf(name, "qtype %d qname %s", qtype, qname);
-                    jobject objPacket = create_packet(
-                            args, version, IPPROTO_UDP, "",
-                            source, ntohs(cur->udp.source), dest, ntohs(cur->udp.dest),
-                            name, 0, 0);
-                    log_packet(args, objPacket);
-
-                    // Session done
-                    cur->udp.state = UDP_FINISHING;
-                    return 0;
-                }
-        }
-    }
-
-    // Write pcap record
-    write_pcap_rec(args, pkt, (size_t) length, cur->udp.uid);
 
     // Check for DHCP (tethering)
     if (ntohs(udphdr->source) == 68 || ntohs(udphdr->dest) == 67) {
@@ -476,7 +445,7 @@ ssize_t write_udp(const struct arguments *args, const struct udp_session *cur,
     // Build packet
     if (cur->version == 4) {
         len = sizeof(struct iphdr) + sizeof(struct udphdr) + datalen;
-        buffer = malloc(len);
+        buffer = ng_malloc(len, "udp write4");
         struct iphdr *ip4 = (struct iphdr *) buffer;
         udp = (struct udphdr *) (buffer + sizeof(struct iphdr));
         if (datalen)
@@ -506,7 +475,7 @@ ssize_t write_udp(const struct arguments *args, const struct udp_session *cur,
         csum = calc_checksum(0, (uint8_t *) &pseudo, sizeof(struct ippseudo));
     } else {
         len = sizeof(struct ip6_hdr) + sizeof(struct udphdr) + datalen;
-        buffer = malloc(len);
+        buffer = ng_malloc(len, "udp write6");
         struct ip6_hdr *ip6 = (struct ip6_hdr *) buffer;
         udp = (struct udphdr *) (buffer + sizeof(struct ip6_hdr));
         if (datalen)
@@ -566,7 +535,7 @@ ssize_t write_udp(const struct arguments *args, const struct udp_session *cur,
     } else
         log_android(ANDROID_LOG_WARN, "UDP write error %d: %s", errno, strerror(errno));
 
-    free(buffer);
+    ng_free(buffer, __FILE__, __LINE__);
 
     if (res != len) {
         log_android(ANDROID_LOG_ERROR, "write %d/%d", res, len);
