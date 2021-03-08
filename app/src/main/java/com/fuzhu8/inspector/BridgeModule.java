@@ -152,7 +152,7 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 						pref.getBoolean("pref_trace_file", false),
 						pref.getBoolean("pref_trace_sys_call", false),
 						pref.getBoolean("pref_trace_trace", false),
-						patchSSL, pref.getBoolean("pref_broadcast", false));
+						patchSSL, pref.getBoolean("pref_broadcast", true));
 				moduleStarter.startModule(lpparam.appInfo, lpparam.processName, moduleDataDir, pref.getString("pref_collect_bytecode_text", null), lpparam.classLoader);
 			}
 		} catch (Throwable throwable) {

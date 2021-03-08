@@ -50,7 +50,7 @@ public class PermissionFaker25 extends PermissionFaker {
 			return ret;
 		}
 		pref.reload();
-		if(!pref.getBoolean("pref_debuggable_all", false) && (flags & (PackageParser.PARSE_IS_SYSTEM_DIR | PackageParser.PARSE_IS_SYSTEM)) != 0) {
+		if(!pref.getBoolean("pref_debuggable_all", false)/* && (flags & (PackageParser.PARSE_IS_SYSTEM_DIR | PackageParser.PARSE_IS_SYSTEM)) != 0*/) {
 			return ret;
 		}
 		if(!BuildConfig.APPLICATION_ID.equals(ret.packageName)) {

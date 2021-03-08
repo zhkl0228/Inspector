@@ -13,6 +13,7 @@ import com.fuzhu8.inspector.module.AbstractModuleStarter;
 import com.fuzhu8.inspector.script.LuaScriptManager;
 
 import cn.android.bridge.AndroidBridge;
+import eu.faircode.netguard.ssl.JustTrustMe;
 
 /**
  * @author zhkl0228
@@ -48,6 +49,8 @@ public class BridgeModuleStarter extends AbstractModuleStarter {
 		// new BaiduProtectKiller(context, inspector, dexFileManager);
 		
 		// DexposedBridge.canDexposed();
+
+		new JustTrustMe(context.getProcessName()).killSSLTrust(context.getClassLoader());
 	}
 
 	@SuppressLint("ObsoleteSdkInt")

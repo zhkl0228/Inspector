@@ -46,7 +46,7 @@ dependencies {
     compile 'org.slf4j:slf4j-api:1.7.10'
     //noinspection GradleDependency
     compile 'commons-io:commons-io:2.2'
-    compile 'cn.banny:utils:0.0.4'
+    compile 'com.github.zhkl0228:utils:0.0.14'
 
     provided 'cn.banny:stetho:1.5.0'
     //noinspection GradleDependency

@@ -320,7 +320,12 @@ public abstract class HookFunctionRequest<T> {
 		if (clazz == null | isStr || clazz.isEnum() || clazz.isPrimitive() || clazz.getName().startsWith("java")) {
 			buffer.append(obj);
 		} else {
-			buffer.append(clazz.getName()).append("@").append(Integer.toHexString(obj.hashCode()));
+			buffer.append(clazz.getName()).append("@");
+			if (obj == null) {
+				buffer.append("NULL");
+			} else {
+				buffer.append(Integer.toHexString(obj.hashCode()));
+			}
 		}
 
 		if(isStr) {

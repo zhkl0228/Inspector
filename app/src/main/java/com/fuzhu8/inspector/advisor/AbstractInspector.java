@@ -538,7 +538,6 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			completer.addCommandHelp("inspector:thread(" + thread.getId() + "); -- " + thread.getName(), "inspector:thread(threadId) -- list stack trace for thread: " + thread.getName());
 		}
 		completer.commit();
-
 	}
 
 	@SuppressWarnings("unused")
@@ -2232,6 +2231,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			try {
 				String lua = FileUtils.readFileToString(file, "UTF-8");
 				if (!StringUtils.isEmpty(lua)) {
+					println("Eval boot script: " + lua);
 					luaScriptManager.eval(lua);
 				}
 			} catch(IOException ignored) {}
