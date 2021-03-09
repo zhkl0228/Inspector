@@ -16,7 +16,6 @@ import com.fuzhu8.inspector.module.AbstractModuleStarter;
 import com.fuzhu8.inspector.module.ModuleStarter;
 
 import java.io.File;
-import java.util.Collections;
 
 import cn.android.bridge.AndroidBridge;
 import cn.android.bridge.IXposedHookLoadPackage;
@@ -139,20 +138,13 @@ public class BridgeModule extends Module implements IXposedHookZygoteInit, IXpos
 
 			if (isEnabled(pref) && canInspect(lpparam, pref)) {
 				File moduleDataDir = getModuleDataDir(lpparam.appInfo.dataDir, BuildConfig.APPLICATION_ID);
-				int patchSSL = 0;
-				try {
-					for (String str : pref.getStringSet("pref_patch_ssl", Collections.<String>emptySet())) {
-						patchSSL |= Integer.parseInt(str);
-					}
-				} catch (Exception ignored) {
-				}
 				ModuleStarter moduleStarter = new BridgeModuleStarter(modulePath, pref.getBoolean("pref_debug", false),
-						pref.getBoolean("pref_trace_anti", true),
+						pref.getBoolean("pref_trace_anti", false),
 						pref.getBoolean("pref_anti_thread_create", false),
 						pref.getBoolean("pref_trace_file", false),
 						pref.getBoolean("pref_trace_sys_call", false),
 						pref.getBoolean("pref_trace_trace", false),
-						patchSSL, pref.getBoolean("pref_broadcast", true));
+						pref.getBoolean("pref_just_trust_me", true), pref.getBoolean("pref_broadcast", false));
 				moduleStarter.startModule(lpparam.appInfo, lpparam.processName, moduleDataDir, pref.getString("pref_collect_bytecode_text", null), lpparam.classLoader);
 			}
 		} catch (Throwable throwable) {

@@ -21,9 +21,13 @@ import eu.faircode.netguard.ssl.JustTrustMe;
  */
 public class BridgeModuleStarter extends AbstractModuleStarter {
 
+	private final boolean just_trust_me;
+
 	public BridgeModuleStarter(String modulePath, boolean debug, boolean trace_anti, boolean anti_thread_create,
-							   boolean trace_file, boolean trace_sys_call, boolean trace_trace, int patch_ssl, boolean broadcastPort) {
-		super(modulePath, debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace, patch_ssl, broadcastPort);
+							   boolean trace_file, boolean trace_sys_call, boolean trace_trace, boolean just_trust_me, boolean broadcastPort) {
+		super(modulePath, debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace, broadcastPort);
+
+		this.just_trust_me = just_trust_me;
 	}
 
 	/* (non-Javadoc)
@@ -50,7 +54,9 @@ public class BridgeModuleStarter extends AbstractModuleStarter {
 		
 		// DexposedBridge.canDexposed();
 
-		new JustTrustMe(context.getProcessName()).killSSLTrust(context.getClassLoader());
+		if (just_trust_me) {
+			new JustTrustMe(inspector, context.getProcessName()).killSSLTrust(context.getClassLoader());
+		}
 	}
 
 	@SuppressLint("ObsoleteSdkInt")

@@ -25,6 +25,13 @@
         </CheckBoxPreference>
         <CheckBoxPreference
             android:defaultValue="false"
+            android:key="pref_just_trust_me"
+            android:summary="@string/pref_just_trust_me_sum"
+            android:title="@string/pref_just_trust_me_title"
+            android:dependency="pref_enable_status">
+        </CheckBoxPreference>
+        <CheckBoxPreference
+            android:defaultValue="false"
             android:key="pref_system_app"
             android:summary="@string/pref_system_app_sum"
             android:title="@string/pref_system_app_title"
@@ -71,7 +78,7 @@
             android:title="@string/pref_trace_trace_title"
             android:dependency="pref_trace_anti">
         </CheckBoxPreference>
-        <MultiSelectListPreference
+        <!--<MultiSelectListPreference
             android:key="pref_patch_ssl"
             android:summary="@string/pref_patch_ssl_sum"
             android:title="@string/pref_patch_ssl_title"
@@ -79,7 +86,7 @@
             android:entries="@array/pref_patch_ssl_entries"
             android:entryValues="@array/pref_patch_ssl_values"
             android:dependency="pref_trace_anti">
-        </MultiSelectListPreference>
+        </MultiSelectListPreference>-->
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="pref_debuggable_all"

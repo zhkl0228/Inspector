@@ -37,11 +37,10 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 	
 	private final String modulePath;
 	private final boolean debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace;
-	private final int patch_ssl;
 	protected final boolean broadcastPort;
 
 	public AbstractModuleStarter(String modulePath, boolean debug, boolean trace_anti, boolean anti_thread_create,
-								 boolean trace_file, boolean trace_sys_call, boolean trace_trace, int patch_ssl, boolean broadcastPort) {
+								 boolean trace_file, boolean trace_sys_call, boolean trace_trace, boolean broadcastPort) {
 		super();
 		this.modulePath = modulePath;
 		this.debug = debug;
@@ -50,7 +49,6 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 		this.trace_file = trace_file;
 		this.trace_sys_call = trace_sys_call;
 		this.trace_trace = trace_trace;
-		this.patch_ssl = patch_ssl;
 		this.broadcastPort = broadcastPort;
 	}
 	
@@ -112,7 +110,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 					trace_file,
 					trace_sys_call,
 					trace_trace,
-					patch_ssl);
+					0);
 		}
 
 		if(Feature.supportDvm() && !StringUtils.isEmpty(collect_bytecode_text)) {

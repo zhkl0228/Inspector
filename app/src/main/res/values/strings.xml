@@ -87,6 +87,9 @@
     <string name="pref_system_app_title">System-App</string>
     <string name="pref_system_app_sum">是否Hook系统应用</string>
 
+    <string name="pref_just_trust_me_title">JustTrustMe</string>
+    <string name="pref_just_trust_me_sum">是否启用SSLKiller</string>
+
     <string name="pref_app_service_title">App-Service</string>
     <string name="pref_app_service_sum">是否Hook应用服务</string>
 

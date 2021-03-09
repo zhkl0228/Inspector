@@ -19,8 +19,8 @@ import com.taobao.android.dexposed.DexposedBridge;
 public class DexposedModuleStarter extends AbstractModuleStarter {
 
 	public DexposedModuleStarter(String modulePath, boolean debug, boolean trace_anti, boolean anti_thread_create,
-			boolean trace_file, boolean trace_sys_call, boolean trace_trace, int patch_ssl, boolean broadcastPort) {
-		super(modulePath, debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace, patch_ssl, broadcastPort);
+			boolean trace_file, boolean trace_sys_call, boolean trace_trace, boolean broadcastPort) {
+		super(modulePath, debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace, broadcastPort);
 	}
 
 	/* (non-Javadoc)

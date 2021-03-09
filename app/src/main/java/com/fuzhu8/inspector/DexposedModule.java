@@ -40,10 +40,10 @@ class DexposedModule extends Module {
 	 */
 	public static boolean start(String modulePath, boolean debug,
 			boolean trace_anti, boolean anti_thread_create, boolean trace_file,
-			boolean trace_sys_call, boolean trace_trace, boolean patch_ssl) {
+			boolean trace_sys_call, boolean trace_trace) {
 		try {
 			final ModuleStarter moduleStarter = new DexposedModuleStarter(modulePath, debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace,
-					patch_ssl ? 0x7 : 0, true);
+					true);
 			ActivityThread activityThread = currentActivityThread();
 			if(activityThread == null) {
 				DexposedBridge.log("activityThread is null, delay start.");

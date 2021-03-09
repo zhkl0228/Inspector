@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.fuzhu8.inspector.ui.sdk10;
 
 import android.app.Activity;

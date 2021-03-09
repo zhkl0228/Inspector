@@ -17,11 +17,11 @@ public class DexposedLoader implements Runnable {
 	
 	private final String modulePath;
 	
-	private final boolean debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace, patch_ssl;
+	private final boolean debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace;
 	
 	public DexposedLoader(String modulePath, boolean debug,
 			boolean trace_anti, boolean anti_thread_create, boolean trace_file,
-			boolean trace_sys_call, boolean trace_trace, boolean patch_ssl) {
+			boolean trace_sys_call, boolean trace_trace) {
 		super();
 		this.modulePath = modulePath;
 		
@@ -31,11 +31,10 @@ public class DexposedLoader implements Runnable {
 		this.trace_file = trace_file;
 		this.trace_sys_call = trace_sys_call;
 		this.trace_trace = trace_trace;
-		this.patch_ssl = patch_ssl;
 	}
 
 	public static void load(String modulePath) {
-		new Thread(new DexposedLoader(modulePath, false, false, false, false, false, false, false), DexposedLoader.class.getSimpleName()).start();
+		new Thread(new DexposedLoader(modulePath, false, false, false, false, false, false), DexposedLoader.class.getSimpleName()).start();
 	}
 
 	@Override
@@ -44,8 +43,8 @@ public class DexposedLoader implements Runnable {
 			while(true) {
 				ClassLoader classLoader = new PathClassLoader(modulePath, new File(Environment.getDataDirectory(), "data/" + DexposedLoader.class.getPackage().getName() + "/lib").getAbsolutePath(), ClassLoader.getSystemClassLoader());
 				Class<?> clazz = classLoader.loadClass("com.fuzhu8.inspector.DexposedModule");
-				Method method = clazz.getDeclaredMethod("start", String.class, boolean.class, boolean.class, boolean.class, boolean.class, boolean.class, boolean.class, boolean.class);
-				Boolean restart = (Boolean) method.invoke(null, modulePath, debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace, patch_ssl);
+				Method method = clazz.getDeclaredMethod("start", String.class, boolean.class, boolean.class, boolean.class, boolean.class, boolean.class, boolean.class);
+				Boolean restart = (Boolean) method.invoke(null, modulePath, debug, trace_anti, anti_thread_create, trace_file, trace_sys_call, trace_trace);
 				if(!restart) {
 					break;
 				}

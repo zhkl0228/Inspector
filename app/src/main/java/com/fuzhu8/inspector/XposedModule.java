@@ -18,7 +18,6 @@ import com.fuzhu8.inspector.xposed.permissions.XposedPackageFaker;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.util.Collections;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
@@ -46,7 +45,7 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 
 	@SuppressLint("PrivateApi")
 	@Override
-	public void initZygote(StartupParam startupParam) throws Throwable {
+	public void initZygote(StartupParam startupParam) {
 		XSharedPreferences pref = new XSharedPreferences(BuildConfig.APPLICATION_ID);
 		modulePath = startupParam.modulePath;
 
@@ -137,7 +136,7 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 	 */
 	@SuppressLint("PrivateApi")
 	@Override
-	public void handleLoadPackage(LoadPackageParam lpparam) throws Throwable {
+	public void handleLoadPackage(LoadPackageParam lpparam) {
 		if(lpparam.isFirstApplication && lpparam.classLoader != null && packageFakerResult != null) {
 			Class<?> packageManagerServiceClass = null;
 			try {
@@ -160,7 +159,7 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 		if ("com.android.vpndialogs".equals(lpparam.packageName)) {
 			XposedHelpers.findAndHookMethod("com.android.vpndialogs.ConfirmDialog", lpparam.classLoader, "onResume", new XC_MethodHook() {
 				@Override
-				protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+				protected void afterHookedMethod(MethodHookParam param) {
 					try {
 						Object mService = XposedHelpers.getObjectField(param.thisObject, "mService");
 
@@ -192,19 +191,13 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 
 		if (isEnabled(pref) && canInspect(lpparam, pref)) {
 			File moduleDataDir = getModuleDataDir(lpparam.appInfo.dataDir, BuildConfig.APPLICATION_ID);
-			int patchSSL = 0;
-			try {
-				for (String str : pref.getStringSet("pref_patch_ssl", Collections.<String>emptySet())) {
-					patchSSL |= Integer.parseInt(str);
-				}
-			} catch(Exception ignored) {}
 			ModuleStarter moduleStarter = new XposedModuleStarter(modulePath, pref.getBoolean("pref_debug", false),
 					pref.getBoolean("pref_trace_anti", true),
 					pref.getBoolean("pref_anti_thread_create", false),
 					pref.getBoolean("pref_trace_file", false),
 					pref.getBoolean("pref_trace_sys_call", false),
 					pref.getBoolean("pref_trace_trace", false),
-					patchSSL, pref.getBoolean("pref_broadcast", true));
+					pref.getBoolean("pref_broadcast", false));
 			moduleStarter.startModule(lpparam.appInfo, lpparam.processName, moduleDataDir, pref.getString("pref_collect_bytecode_text", null), lpparam.classLoader);
 		}
 	}

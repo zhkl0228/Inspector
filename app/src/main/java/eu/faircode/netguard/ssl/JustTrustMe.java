@@ -8,6 +8,8 @@ import android.util.Log;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebView;
 
+import com.fuzhu8.tcpcap.handler.Appender;
+
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.scheme.HostNameResolver;
 import org.apache.http.conn.scheme.PlainSocketFactory;
@@ -58,18 +60,21 @@ public class JustTrustMe {
 
     private static final String TAG = "JustTrustMe";
 
-    private final String currentPackageName;
+    private final Appender appender;
+    private final String packageName;
 
-    public JustTrustMe(String currentPackageName) {
-        this.currentPackageName = currentPackageName;
+    public JustTrustMe(Appender appender, String packageName) {
+        this.appender = appender;
+        this.packageName = packageName;
     }
 
     public void killSSLTrust(final ClassLoader classLoader) {
+        appender.out_println("Start SSLKiller");
 
         /* Apache Hooks */
         /* external/apache-http/src/org/apache/http/impl/client/DefaultHttpClient.java */
         /* public DefaultHttpClient() */
-        Log.d(TAG, "Hooking DefaultHTTPClient for: " + currentPackageName);
+        Log.d(TAG, "Hooking DefaultHTTPClient for: " + packageName);
         findAndHookConstructor(DefaultHttpClient.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(XC_MethodHook.MethodHookParam param) {
@@ -81,19 +86,19 @@ public class JustTrustMe {
 
         /* external/apache-http/src/org/apache/http/impl/client/DefaultHttpClient.java */
         /* public DefaultHttpClient(HttpParams params) */
-        Log.d(TAG, "Hooking DefaultHTTPClient(HttpParams) for: " + currentPackageName);
+        Log.d(TAG, "Hooking DefaultHTTPClient(HttpParams) for: " + packageName);
         findAndHookConstructor(DefaultHttpClient.class, HttpParams.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
 
-                setObjectField(param.thisObject, "defaultParams", (HttpParams) param.args[0]);
+                setObjectField(param.thisObject, "defaultParams", param.args[0]);
                 setObjectField(param.thisObject, "connManager", getSCCM());
             }
         });
 
         /* external/apache-http/src/org/apache/http/impl/client/DefaultHttpClient.java */
         /* public DefaultHttpClient(ClientConnectionManager conman, HttpParams params) */
-        Log.d(TAG, "Hooking DefaultHTTPClient(ClientConnectionManager, HttpParams) for: " + currentPackageName);
+        Log.d(TAG, "Hooking DefaultHTTPClient(ClientConnectionManager, HttpParams) for: " + packageName);
         findAndHookConstructor(DefaultHttpClient.class, ClientConnectionManager.class, HttpParams.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
@@ -121,7 +126,7 @@ public class JustTrustMe {
 
         /* external/apache-http/src/org/apache/http/conn/ssl/SSLSocketFactory.java */
         /* public SSLSocketFactory( ... ) */
-        Log.d(TAG, "Hooking SSLSocketFactory(String, KeyStore, String, KeyStore) for: " + currentPackageName);
+        Log.d(TAG, "Hooking SSLSocketFactory(String, KeyStore, String, KeyStore) for: " + packageName);
         findAndHookConstructor(SSLSocketFactory.class, String.class, KeyStore.class, String.class, KeyStore.class,
                 SecureRandom.class, HostNameResolver.class, new XC_MethodHook() {
                     @Override
@@ -152,17 +157,17 @@ public class JustTrustMe {
 
         /* external/apache-http/src/org/apache/http/conn/ssl/SSLSocketFactory.java */
         /* public static SSLSocketFactory getSocketFactory() */
-        Log.d(TAG, "Hooking static SSLSocketFactory(String, KeyStore, String, KeyStore) for: " + currentPackageName);
+        Log.d(TAG, "Hooking static SSLSocketFactory(String, KeyStore, String, KeyStore) for: " + packageName);
         findAndHookMethod("org.apache.http.conn.ssl.SSLSocketFactory", classLoader, "getSocketFactory", new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam param) {
-                return (SSLSocketFactory) newInstance(SSLSocketFactory.class);
+                return newInstance(SSLSocketFactory.class);
             }
         });
 
         /* external/apache-http/src/org/apache/http/conn/ssl/SSLSocketFactory.java */
         /* public boolean isSecure(Socket) */
-        Log.d(TAG, "Hooking SSLSocketFactory(Socket) for: " + currentPackageName);
+        Log.d(TAG, "Hooking SSLSocketFactory(Socket) for: " + packageName);
         findAndHookMethod("org.apache.http.conn.ssl.SSLSocketFactory", classLoader, "isSecure", Socket.class, new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam param) {
@@ -173,7 +178,7 @@ public class JustTrustMe {
         /* JSSE Hooks */
         /* libcore/luni/src/main/java/javax/net/ssl/TrustManagerFactory.java */
         /* public final TrustManager[] getTrustManager() */
-        Log.d(TAG, "Hooking TrustManagerFactory.getTrustManagers() for: " + currentPackageName);
+        Log.d(TAG, "Hooking TrustManagerFactory.getTrustManagers() for: " + packageName);
         findAndHookMethod("javax.net.ssl.TrustManagerFactory", classLoader, "getTrustManagers", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
@@ -192,7 +197,7 @@ public class JustTrustMe {
 
         /* libcore/luni/src/main/java/javax/net/ssl/HttpsURLConnection.java */
         /* public void setDefaultHostnameVerifier(HostnameVerifier) */
-        Log.d(TAG, "Hooking HttpsURLConnection.setDefaultHostnameVerifier for: " + currentPackageName);
+        Log.d(TAG, "Hooking HttpsURLConnection.setDefaultHostnameVerifier for: " + packageName);
         findAndHookMethod("javax.net.ssl.HttpsURLConnection", classLoader, "setDefaultHostnameVerifier",
                 HostnameVerifier.class, new XC_MethodReplacement() {
                     @Override
@@ -203,7 +208,7 @@ public class JustTrustMe {
 
         /* libcore/luni/src/main/java/javax/net/ssl/HttpsURLConnection.java */
         /* public void setSSLSocketFactory(SSLSocketFactory) */
-        Log.d(TAG, "Hooking HttpsURLConnection.setSSLSocketFactory for: " + currentPackageName);
+        Log.d(TAG, "Hooking HttpsURLConnection.setSSLSocketFactory for: " + packageName);
         findAndHookMethod("javax.net.ssl.HttpsURLConnection", classLoader, "setSSLSocketFactory", javax.net.ssl.SSLSocketFactory.class,
                 new XC_MethodReplacement() {
                     @Override
@@ -214,7 +219,7 @@ public class JustTrustMe {
 
         /* libcore/luni/src/main/java/javax/net/ssl/HttpsURLConnection.java */
         /* public void setHostnameVerifier(HostNameVerifier) */
-        Log.d(TAG, "Hooking HttpsURLConnection.setHostnameVerifier for: " + currentPackageName);
+        Log.d(TAG, "Hooking HttpsURLConnection.setHostnameVerifier for: " + packageName);
         findAndHookMethod("javax.net.ssl.HttpsURLConnection", classLoader, "setHostnameVerifier", HostnameVerifier.class,
                 new XC_MethodReplacement() {
                     @Override
@@ -227,7 +232,7 @@ public class JustTrustMe {
         /* WebView Hooks */
         /* frameworks/base/core/java/android/webkit/WebViewClient.java */
         /* public void onReceivedSslError(Webview, SslErrorHandler, SslError) */
-        Log.d(TAG, "Hooking WebViewClient.onReceivedSslError(WebView, SslErrorHandler, SslError) for: " + currentPackageName);
+        Log.d(TAG, "Hooking WebViewClient.onReceivedSslError(WebView, SslErrorHandler, SslError) for: " + packageName);
 
         findAndHookMethod("android.webkit.WebViewClient", classLoader, "onReceivedSslError",
                 WebView.class, SslErrorHandler.class, SslError.class, new XC_MethodReplacement() {
@@ -240,7 +245,7 @@ public class JustTrustMe {
 
         /* frameworks/base/core/java/android/webkit/WebViewClient.java */
         /* public void onReceivedError(WebView, int, String, String) */
-        Log.d(TAG, "Hooking WebViewClient.onReceivedSslError(WebView, int, string, string) for: " + currentPackageName);
+        Log.d(TAG, "Hooking WebViewClient.onReceivedSslError(WebView, int, string, string) for: " + packageName);
 
         findAndHookMethod("android.webkit.WebViewClient", classLoader, "onReceivedError",
                 WebView.class, int.class, String.class, String.class, new XC_MethodReplacement() {
@@ -284,7 +289,7 @@ public class JustTrustMe {
         if (hasTrustManagerImpl()) {
             /* TrustManagerImpl Hooks */
             /* external/conscrypt/src/platform/java/org/conscrypt/TrustManagerImpl.java */
-            Log.d(TAG, "Hooking com.android.org.conscrypt.TrustManagerImpl for: " + currentPackageName);
+            Log.d(TAG, "Hooking com.android.org.conscrypt.TrustManagerImpl for: " + packageName);
 
             /* public void checkServerTrusted(X509Certificate[] chain, String authType) */
             findAndHookMethod("com.android.org.conscrypt.TrustManagerImpl", classLoader,
@@ -433,7 +438,7 @@ public class JustTrustMe {
     }
 
     private void processXutils(ClassLoader classLoader) {
-        Log.d(TAG, "Hooking org.xutils.http.RequestParams.setSslSocketFactory(SSLSocketFactory) (3) for: " + currentPackageName);
+        Log.d(TAG, "Hooking org.xutils.http.RequestParams.setSslSocketFactory(SSLSocketFactory) (3) for: " + packageName);
         try {
             classLoader.loadClass("org.xutils.http.RequestParams");
             findAndHookMethod("org.xutils.http.RequestParams", classLoader, "setSslSocketFactory", javax.net.ssl.SSLSocketFactory.class, new XC_MethodHook() {
@@ -451,7 +456,7 @@ public class JustTrustMe {
                 }
             });
         } catch (Exception e) {
-            Log.d(TAG, "org.xutils.http.RequestParams not found in " + currentPackageName + "-- not hooking");
+            Log.d(TAG, "org.xutils.http.RequestParams not found in " + packageName + "-- not hooking");
         }
     }
 
@@ -462,7 +467,7 @@ public class JustTrustMe {
         /* public void check(String hostname, List<Certificate> peerCertificates) throws SSLPeerUnverifiedException{}*/
         /* Either returns true or a exception so blanket return true */
         /* Tested against version 2.5 */
-        Log.d(TAG, "Hooking com.squareup.okhttp.CertificatePinner.check(String,List) (2.5) for: " + currentPackageName);
+        Log.d(TAG, "Hooking com.squareup.okhttp.CertificatePinner.check(String,List) (2.5) for: " + packageName);
 
         try {
             classLoader.loadClass("com.squareup.okhttp.CertificatePinner");
@@ -479,11 +484,11 @@ public class JustTrustMe {
                     });
         } catch (ClassNotFoundException e) {
             // pass
-            Log.d(TAG, "OKHTTP 2.5 not found in " + currentPackageName + "-- not hooking");
+            Log.d(TAG, "OKHTTP 2.5 not found in " + packageName + "-- not hooking");
         }
 
         //https://github.com/square/okhttp/blob/parent-3.0.1/okhttp/src/main/java/okhttp3/CertificatePinner.java#L144
-        Log.d(TAG, "Hooking okhttp3.CertificatePinner.check(String,List) (3.x) for: " + currentPackageName);
+        Log.d(TAG, "Hooking okhttp3.CertificatePinner.check(String,List) (3.x) for: " + packageName);
 
         try {
             classLoader.loadClass("okhttp3.CertificatePinner");
@@ -499,7 +504,7 @@ public class JustTrustMe {
                         }
                     });
         } catch (ClassNotFoundException e) {
-            Log.d(TAG, "OKHTTP 3.x not found in " + currentPackageName + " -- not hooking");
+            Log.d(TAG, "OKHTTP 3.x not found in " + packageName + " -- not hooking");
             // pass
         }
 
@@ -518,7 +523,7 @@ public class JustTrustMe {
                         }
                     });
         } catch (ClassNotFoundException e) {
-            Log.d(TAG, "OKHTTP 3.x not found in " + currentPackageName + " -- not hooking OkHostnameVerifier.verify(String, SSLSession)");
+            Log.d(TAG, "OKHTTP 3.x not found in " + packageName + " -- not hooking OkHostnameVerifier.verify(String, SSLSession)");
             // pass
         }
 
@@ -537,7 +542,7 @@ public class JustTrustMe {
                         }
                     });
         } catch (ClassNotFoundException e) {
-            Log.d(TAG, "OKHTTP 3.x not found in " + currentPackageName + " -- not hooking OkHostnameVerifier.verify(String, X509)(");
+            Log.d(TAG, "OKHTTP 3.x not found in " + packageName + " -- not hooking OkHostnameVerifier.verify(String, X509)(");
             // pass
         }
 
@@ -550,7 +555,7 @@ public class JustTrustMe {
                     javax.net.ssl.SSLSession.class,
                     XC_MethodReplacement.returnConstant(true));
         } catch (ClassNotFoundException e) {
-            Log.d(TAG, "Android OKHTTP not found in " + currentPackageName + " -- not hooking OkHostnameVerifier.verify(String, SSLSession)");
+            Log.d(TAG, "Android OKHTTP not found in " + packageName + " -- not hooking OkHostnameVerifier.verify(String, SSLSession)");
             // pass
         }
 
@@ -563,12 +568,12 @@ public class JustTrustMe {
                     java.security.cert.X509Certificate.class,
                     XC_MethodReplacement.returnConstant(true));
         } catch (ClassNotFoundException e) {
-            Log.d(TAG, "Android OKHTTP not found in " + currentPackageName + " -- not hooking OkHostnameVerifier.verify(String, X509)(");
+            Log.d(TAG, "Android OKHTTP not found in " + packageName + " -- not hooking OkHostnameVerifier.verify(String, X509)(");
             // pass
         }
 
         //https://github.com/square/okhttp/blob/okhttp_4.2.x/okhttp/src/main/java/okhttp3/CertificatePinner.kt
-        Log.d(TAG, "Hooking okhttp3.CertificatePinner.check(String,List) (4.2.0+) for: " + currentPackageName);
+        Log.d(TAG, "Hooking okhttp3.CertificatePinner.check(String,List) (4.2.0+) for: " + packageName);
 
         try {
             classLoader.loadClass("okhttp3.CertificatePinner");
@@ -585,7 +590,7 @@ public class JustTrustMe {
                         }
                     });
         } catch (Throwable e) {
-            Log.d(TAG, "OKHTTP 4.2.0+ not found in " + currentPackageName + " -- not hooking");
+            Log.d(TAG, "OKHTTP 4.2.0+ not found in " + packageName + " -- not hooking");
             // pass
         }
 
@@ -594,7 +599,7 @@ public class JustTrustMe {
     void processHttpClientAndroidLib(ClassLoader classLoader) {
         /* httpclientandroidlib Hooks */
         /* public final void verify(String host, String[] cns, String[] subjectAlts, boolean strictWithSubDomains) throws SSLException */
-        Log.d(TAG, "Hooking AbstractVerifier.verify(String, String[], String[], boolean) for: " + currentPackageName);
+        Log.d(TAG, "Hooking AbstractVerifier.verify(String, String[], String[], boolean) for: " + packageName);
 
         try {
             classLoader.loadClass("ch.boye.httpclientandroidlib.conn.ssl.AbstractVerifier");
@@ -608,7 +613,7 @@ public class JustTrustMe {
                     });
         } catch (ClassNotFoundException e) {
             // pass
-            Log.d(TAG, "httpclientandroidlib not found in " + currentPackageName + "-- not hooking");
+            Log.d(TAG, "httpclientandroidlib not found in " + packageName + "-- not hooking");
         }
     }
 
