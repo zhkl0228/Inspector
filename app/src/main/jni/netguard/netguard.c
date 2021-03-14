@@ -452,9 +452,6 @@ void report_error(const struct arguments *args, jint error, const char *fmt, ...
 static jmethodID midProtect = NULL;
 
 int protect_socket(const struct arguments *args, int socket) {
-    if (args->ctx->sdk >= 21)
-        return 0;
-
     jclass cls = (*args->env)->GetObjectClass(args->env, args->instance);
     ng_add_alloc(cls, "cls");
     if (cls == NULL) {

@@ -143,6 +143,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         }
 
         private void start() {
+            updateSSLPorts();
             if (vpn == null) {
                 Builder builder = getBuilder();
                 vpn = startVPN(builder);
@@ -334,7 +335,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
         // VPN address
         String vpn4 = "10.1.10.1";
-        Log.i(TAG, "vpn4=" + vpn4);
+        Log.i(TAG, "vpn4=" + vpn4 + ", sslPorts=" + Arrays.toString(sslPorts));
         builder.addAddress(vpn4, 32);
 
         String vpn6 = "fd00:1:fd00:1:fd00:1:fd00:1";
@@ -536,7 +537,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     private int[] sslPorts = new int[0];
 
     private void updateSSLPorts() {
-        SharedPreferences preferences = getSharedPreferences("com.fuzhu8.inspector_preferences", Context.MODE_PRIVATE);
+        SharedPreferences preferences = getSharedPreferences(BuildConfig.APPLICATION_ID + "_preferences", Context.MODE_PRIVATE);
         String sslPorts = preferences.getString("pref_ssl_ports", "443");
         String[] ports = sslPorts.split(",");
         List<Integer> list = new ArrayList<>();
@@ -553,12 +554,11 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     @Override
     public void onCreate() {
         jni_context = jni_init(Build.VERSION.SDK_INT);
-        updateSSLPorts();
-        Log.d(TAG, "onCreate context=0x" + Long.toHexString(jni_context) + ", obj=" + this + ", sslPorts=" + Arrays.toString(sslPorts));
+        Log.d(TAG, "onCreate context=0x" + Long.toHexString(jni_context) + ", obj=" + this);
 
         super.onCreate();
 
-        HandlerThread commandThread = new HandlerThread("Netguard command", Process.THREAD_PRIORITY_FOREGROUND);
+        HandlerThread commandThread = new HandlerThread("NetGuard command", Process.THREAD_PRIORITY_FOREGROUND);
         commandThread.start();
 
         commandLooper = commandThread.getLooper();

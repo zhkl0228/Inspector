@@ -367,8 +367,11 @@ jboolean handle_udp(const struct arguments *args,
             cur->udp.state = UDP_FINISHING;
             return 0;
         }
-    } else
+    } else {
         cur->udp.sent += datalen;
+
+        write_pcap_rec(args, pkt, length, cur->udp.uid);
+    }
 
     return 1;
 }
