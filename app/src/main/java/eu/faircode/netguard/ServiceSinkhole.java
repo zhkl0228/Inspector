@@ -143,7 +143,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         }
 
         private void start() {
-            updateSSLPorts();
+            updateSSLSettings();
             if (vpn == null) {
                 Builder builder = getBuilder();
                 vpn = startVPN(builder);
@@ -335,7 +335,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
         // VPN address
         String vpn4 = "10.1.10.1";
-        Log.i(TAG, "vpn4=" + vpn4 + ", sslPorts=" + Arrays.toString(sslPorts));
+        Log.i(TAG, "vpn4=" + vpn4);
         builder.addAddress(vpn4, 32);
 
         String vpn6 = "fd00:1:fd00:1:fd00:1:fd00:1";
@@ -535,9 +535,10 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     private X509Certificate rootCert;
     private PrivateKey privateKey;
     private int[] sslPorts = new int[0];
+    private int mitmTimeout = 10000; // default 10 seconds
 
-    private void updateSSLPorts() {
-        SharedPreferences preferences = getSharedPreferences(BuildConfig.APPLICATION_ID + "_preferences", Context.MODE_PRIVATE);
+    private void updateSSLSettings() {
+        SharedPreferences preferences = getSharedPreferences(BuildConfig.APPLICATION_ID + "_preferences", Context.MODE_MULTI_PROCESS);
         String sslPorts = preferences.getString("pref_ssl_ports", "443");
         String[] ports = sslPorts.split(",");
         List<Integer> list = new ArrayList<>();
@@ -549,6 +550,11 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             this.sslPorts[i] = list.get(i);
         }
         Arrays.sort(this.sslPorts);
+        String timeout = preferences.getString("pref_mitm_timeout", "10000");
+        try {
+            mitmTimeout = Integer.parseInt(timeout);
+        } catch(NumberFormatException ignored) {}
+        Log.d(TAG,  "updateSSLPorts sslPorts=" + Arrays.toString(this.sslPorts) + ", text=" + sslPorts + ", mitmTimeout=" + mitmTimeout + ", timeout=" + timeout);
     }
 
     @Override
@@ -787,7 +793,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     }
 
     private Allowed mitm(Packet packet) throws Exception {
-        return SSLProxy.create(this, rootCert, privateKey, packet).redirect();
+        return SSLProxy.create(this, rootCert, privateKey, packet, mitmTimeout).redirect();
     }
 
     // Called from native code

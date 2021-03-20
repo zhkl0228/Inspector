@@ -3,7 +3,7 @@ apply plugin: 'com.android.library'
 allprojects {
     repositories {
         mavenLocal()
-        maven{ url 'http://jdly3101.3322.org:8081/nexus/content/groups/public/' }
+        maven{ url 'http://192.168.31.88:8081/nexus/content/groups/public/' }
         jcenter()
     }
 }

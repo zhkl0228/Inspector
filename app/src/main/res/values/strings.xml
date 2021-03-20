@@ -103,4 +103,8 @@
     <string name="pref_ssl_ports_dialogTitle">输入SSL端口列表，英文逗号分隔</string>
     <string name="pref_ssl_ports_title">SSL Port</string>
 
+    <string name="pref_mitm_timeout_sum">MITM超时</string>
+    <string name="pref_mitm_timeout_dialogTitle">输入MITM超时设置，单位毫秒</string>
+    <string name="pref_mitm_timeout_title">MITM Timeout</string>
+
 </resources>

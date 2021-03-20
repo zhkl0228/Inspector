@@ -49,9 +49,9 @@ public class SSLProxy implements Runnable {
     private final Packet packet;
     private final InspectorVpn vpn;
 
-    private static Map<InetSocketAddress, SSLProxy> proxyMap = new ConcurrentHashMap<>();
+    private static final Map<InetSocketAddress, SSLProxy> proxyMap = new ConcurrentHashMap<>();
 
-    static SSLProxy create(InspectorVpn vpn, X509Certificate rootCert, PrivateKey privateKey, Packet packet) throws Exception {
+    static SSLProxy create(InspectorVpn vpn, X509Certificate rootCert, PrivateKey privateKey, Packet packet, int timeout) throws Exception {
         InetSocketAddress clientSocketAddress = packet.createClientAddress();
         SSLProxy proxy = proxyMap.get(clientSocketAddress);
         if (proxy != null) {
@@ -60,15 +60,18 @@ public class SSLProxy implements Runnable {
 
         SSLContext serverContext = ServerCertificate.getSSLContext(packet.createServerAddress());
         if (serverContext != null) {
-            return new SSLProxy(vpn, serverContext, packet);
+            return new SSLProxy(vpn, serverContext, packet, timeout);
         }
 
-        return new SSLProxy(vpn, rootCert, privateKey, packet);
+        return new SSLProxy(vpn, rootCert, privateKey, packet, timeout);
     }
 
-    private SSLProxy(InspectorVpn vpn, SSLContext serverContext, Packet packet) throws IOException {
+    private final int timeout;
+
+    private SSLProxy(InspectorVpn vpn, SSLContext serverContext, Packet packet, int timeout) throws IOException {
         this.vpn = vpn;
         this.packet = packet;
+        this.timeout = timeout;
         InetSocketAddress clientAddress = packet.createClientAddress();
         proxyMap.put(clientAddress, this);
 
@@ -93,9 +96,10 @@ public class SSLProxy implements Runnable {
         return serverSocket;
     }
 
-    private SSLProxy(InspectorVpn vpn, X509Certificate rootCert, PrivateKey privateKey, Packet packet) throws Exception {
+    private SSLProxy(InspectorVpn vpn, X509Certificate rootCert, PrivateKey privateKey, Packet packet, int timeout) throws Exception {
         this.vpn = vpn;
         this.packet = packet;
+        this.timeout = timeout;
         InetSocketAddress clientAddress = packet.createClientAddress();
         proxyMap.put(clientAddress, this);
 
@@ -137,7 +141,7 @@ public class SSLProxy implements Runnable {
 
             app = new Socket();
             app.bind(null);
-            app.setSoTimeout(10000);
+            app.setSoTimeout(timeout);
             vpn.protect(app);
             app.connect(packet.createServerAddress(), 5000);
 
@@ -158,7 +162,7 @@ public class SSLProxy implements Runnable {
             });
             Log.d(ServiceSinkhole.TAG, "startHandshake socket=" + socket);
             socket.startHandshake();
-            countDownLatch.await(15, TimeUnit.SECONDS);
+            countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
             if (serverCertificate == null) {
                 throw new IllegalStateException("handshake failed");
             }
