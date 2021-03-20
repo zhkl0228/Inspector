@@ -762,23 +762,16 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                     }
                 }
 
-                if (packet.protocol == 6 && packet.version == 4 && packet.uid == uid && packet.isSSL(sslPorts)) { // ipv4
-                    allowed = mitm(packet);
-                }
-
                 if (allowed == null) {
                     allowed = new Allowed();
                 }
-                if (packet.uid != uid) {
-                    return allowed;
+
+                if (packet.protocol == 6 && packet.version == 4 && packet.uid == uid && packet.isSSL(sslPorts)) { // ipv4
+                    allowed = mitm(packet);
                 }
             }
         } catch (Exception e) {
             Log.d(TAG, "mitm failed: " + packet, e);
-
-            if (allowed == null) {
-                allowed = new Allowed();
-            }
         }
 
         if (allowed != null) {
@@ -792,8 +785,8 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         return allowed;
     }
 
-    private Allowed mitm(Packet packet) throws Exception {
-        return SSLProxy.create(this, rootCert, privateKey, packet, mitmTimeout).redirect();
+    private Allowed mitm(Packet packet) {
+        return SSLProxy.create(this, rootCert, privateKey, packet, mitmTimeout);
     }
 
     // Called from native code

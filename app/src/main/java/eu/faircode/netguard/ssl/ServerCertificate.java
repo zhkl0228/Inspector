@@ -38,8 +38,8 @@ import eu.faircode.netguard.ServiceSinkhole;
 
 public class ServerCertificate {
 
-    private static Map<X509Certificate, SSLContext> proxyCertMap = new ConcurrentHashMap<>();
-    private static Map<InetSocketAddress, SSLContext> serverSSLContextMap = new ConcurrentHashMap<>();
+    private static final Map<X509Certificate, SSLContext> proxyCertMap = new ConcurrentHashMap<>();
+    private static final Map<InetSocketAddress, SSLContext> serverSSLContextMap = new ConcurrentHashMap<>();
 
     private final X509Certificate peerCertificate;
 
@@ -51,7 +51,7 @@ public class ServerCertificate {
         return serverSSLContextMap.get(serverAddress);
     }
 
-    public SSLContext createSSLContext(X509Certificate rootCert, PrivateKey privateKey, InetSocketAddress serverAddress) throws Exception {
+    public void createSSLContext(X509Certificate rootCert, PrivateKey privateKey, InetSocketAddress serverAddress) throws Exception {
         SSLContext serverContext = proxyCertMap.get(peerCertificate);
         if (serverContext == null) {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "SC");
@@ -75,9 +75,8 @@ public class ServerCertificate {
             serverContext.init(keyManagerFactory.getKeyManagers(), null, null);
             serverContext.getServerSessionContext().setSessionTimeout(10);
             proxyCertMap.put(peerCertificate, serverContext);
-            serverSSLContextMap.put(serverAddress, serverContext);
         }
-        return serverContext;
+        serverSSLContextMap.put(serverAddress, serverContext);
     }
 
     private X509Certificate generateV3Certificate(PublicKey publicKey, X509Certificate peerCertificate, X509Certificate rootCert, PrivateKey privateKey) throws CertificateException, OperatorCreationException {

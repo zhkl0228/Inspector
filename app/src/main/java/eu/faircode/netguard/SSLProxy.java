@@ -44,26 +44,68 @@ public class SSLProxy implements Runnable {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(), 1);
     }
 
+    private enum HandshakeStatus {
+        handshaking, // 正在握手
+        failed1, // 握手失败一次
+        failed2, // 握手失败两次
+        success // 握手成功
+    }
+
     private SSLSocket socket;
     private final SSLServerSocket serverSocket;
     private final Packet packet;
     private final InspectorVpn vpn;
 
-    private static final Map<InetSocketAddress, SSLProxy> proxyMap = new ConcurrentHashMap<>();
+    private static final Map<InetSocketAddress, HandshakeStatus> handshakeStatusMap = new ConcurrentHashMap<>();
 
-    static SSLProxy create(InspectorVpn vpn, X509Certificate rootCert, PrivateKey privateKey, Packet packet, int timeout) throws Exception {
-        InetSocketAddress clientSocketAddress = packet.createClientAddress();
-        SSLProxy proxy = proxyMap.get(clientSocketAddress);
-        if (proxy != null) {
-            return proxy;
+    static Allowed create(final InspectorVpn vpn, final X509Certificate rootCert, final PrivateKey privateKey, final Packet packet, final int timeout) {
+        try {
+            final InetSocketAddress server = packet.createServerAddress();
+            final HandshakeStatus status = handshakeStatusMap.get(server);
+            if (status == null || status == HandshakeStatus.failed1) {
+                handshakeStatusMap.put(server, HandshakeStatus.handshaking);
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try (Socket socket = connectServer(new ServerCertificateNotifier() {
+                            @Override
+                            public void handshakeCompleted(ServerCertificate serverCertificate) {
+                                try {
+                                    serverCertificate.createSSLContext(rootCert, privateKey, server);
+                                } catch (Exception e) {
+                                    Log.w(ServiceSinkhole.TAG, "create ssl context failed", e);
+                                }
+                            }
+                        }, vpn, timeout, packet)) {
+                            Log.d(ServiceSinkhole.TAG, "handshake success: socket=" + socket);
+                            handshakeStatusMap.put(server, HandshakeStatus.success);
+                        } catch (Exception e) {
+                            Log.w(ServiceSinkhole.TAG, "handshake failed: " + server, e);
+                            handshakeStatusMap.put(server, status == null ? HandshakeStatus.failed1 : HandshakeStatus.failed2);
+                        }
+                    }
+                });
+                thread.setDaemon(true);
+                thread.start();
+                return null;
+            }
+            switch (status) {
+                case handshaking: // 正在进行SSL握手
+                    return null;
+                case failed2: // 握手两次失败：连接失败，或者不是SSL协议
+                    return new Allowed();
+                case success: // 握手成功
+                    SSLContext serverContext = ServerCertificate.getSSLContext(server);
+                    if (serverContext != null) {
+                        return new SSLProxy(vpn, serverContext, packet, timeout).redirect();
+                    }
+                default:
+                    throw new IllegalStateException("server=" + server + ", status=" + status);
+            }
+        } catch (IOException e) {
+            Log.w(ServiceSinkhole.TAG, "mitm failed", e);
+            return null;
         }
-
-        SSLContext serverContext = ServerCertificate.getSSLContext(packet.createServerAddress());
-        if (serverContext != null) {
-            return new SSLProxy(vpn, serverContext, packet, timeout);
-        }
-
-        return new SSLProxy(vpn, rootCert, privateKey, packet, timeout);
     }
 
     private final int timeout;
@@ -72,18 +114,10 @@ public class SSLProxy implements Runnable {
         this.vpn = vpn;
         this.packet = packet;
         this.timeout = timeout;
-        InetSocketAddress clientAddress = packet.createClientAddress();
-        proxyMap.put(clientAddress, this);
-
-        synchronized (this) {
-            this.socket = null;
-            this.serverSocket = startSSLServerSocket(serverContext, this, packet);
-        }
+        this.serverSocket = startSSLServerSocket(serverContext, this, packet);
     }
 
     private static final int SERVER_SO_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(30);
-
-    private ServerCertificate serverCertificate;
 
     private static SSLServerSocket startSSLServerSocket(SSLContext serverContext, SSLProxy proxy, Packet packet) throws IOException {
         SSLServerSocketFactory factory = serverContext.getServerSocketFactory();
@@ -96,27 +130,11 @@ public class SSLProxy implements Runnable {
         return serverSocket;
     }
 
-    private SSLProxy(InspectorVpn vpn, X509Certificate rootCert, PrivateKey privateKey, Packet packet, int timeout) throws Exception {
-        this.vpn = vpn;
-        this.packet = packet;
-        this.timeout = timeout;
-        InetSocketAddress clientAddress = packet.createClientAddress();
-        proxyMap.put(clientAddress, this);
-
-        synchronized (this) {
-            try {
-                this.socket = connectServer();
-
-                SSLContext serverContext = serverCertificate.createSSLContext(rootCert, privateKey, packet.createServerAddress());
-                this.serverSocket = startSSLServerSocket(serverContext, this, packet);
-            } catch (Exception e) {
-                proxyMap.remove(clientAddress);
-                throw e;
-            }
-        }
+    private interface ServerCertificateNotifier {
+        void handshakeCompleted(ServerCertificate serverCertificate);
     }
 
-    private SSLSocket connectServer() throws Exception {
+    private static SSLSocket connectServer(final ServerCertificateNotifier notifier, InspectorVpn vpn, int timeout, Packet packet) throws Exception {
         Socket app = null;
         SSLSocket socket = null;
         try {
@@ -152,7 +170,9 @@ public class SSLProxy implements Runnable {
                 public void handshakeCompleted(HandshakeCompletedEvent event) {
                     try {
                         X509Certificate peerCertificate = (X509Certificate) event.getPeerCertificates()[0];
-                        serverCertificate = new ServerCertificate(peerCertificate);
+                        if (notifier != null) {
+                            notifier.handshakeCompleted(new ServerCertificate(peerCertificate));
+                        }
                         countDownLatch.countDown();
                         Log.d(ServiceSinkhole.TAG, "handshakeCompleted event=" + event);
                     } catch (SSLPeerUnverifiedException e) {
@@ -160,10 +180,9 @@ public class SSLProxy implements Runnable {
                     }
                 }
             });
-            Log.d(ServiceSinkhole.TAG, "startHandshake socket=" + socket);
+            Log.d(ServiceSinkhole.TAG, "connectServer socket=" + socket);
             socket.startHandshake();
-            countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
-            if (serverCertificate == null) {
+            if (!countDownLatch.await(timeout, TimeUnit.MILLISECONDS)) {
                 throw new IllegalStateException("handshake failed");
             }
             app.setSoTimeout(0);
@@ -255,9 +274,7 @@ public class SSLProxy implements Runnable {
         try {
             local = (SSLSocket) serverSocket.accept();
             local.setSoTimeout(1000);
-            if (this.socket == null) {
-                this.socket = connectServer();
-            }
+            this.socket = connectServer(null, vpn, timeout, packet);
 
             final InetSocketAddress client = (InetSocketAddress) local.getRemoteSocketAddress();
             final InetSocketAddress server = (InetSocketAddress) socket.getRemoteSocketAddress();
@@ -299,8 +316,6 @@ public class SSLProxy implements Runnable {
             IOUtils.closeQuietly(socket);
             IOUtils.closeQuietly(local);
         } finally {
-            InetSocketAddress clientSocketAddress = new InetSocketAddress(packet.saddr, packet.sport);
-            proxyMap.remove(clientSocketAddress);
             IOUtils.closeQuietly(serverSocket);
         }
 
