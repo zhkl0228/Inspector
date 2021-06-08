@@ -1,13 +1,5 @@
 apply plugin: 'com.android.library'
 
-allprojects {
-    repositories {
-        mavenLocal()
-        maven{ url 'http://192.168.31.88:8081/nexus/content/groups/public/' }
-        jcenter()
-    }
-}
-
 android {
     compileSdkVersion 25
     buildToolsVersion "25.0.3"

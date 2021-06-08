@@ -92,7 +92,7 @@ public class SSLProxy implements Runnable {
             switch (status) {
                 case handshaking: // 正在进行SSL握手
                     return null;
-                case failed2: // 握手两次失败：连接失败，或者不是SSL协议
+                case failed2: // 两次握手失败：连接失败，或者不是SSL协议
                     return new Allowed();
                 case success: // 握手成功
                     SSLContext serverContext = ServerCertificate.getSSLContext(server);
