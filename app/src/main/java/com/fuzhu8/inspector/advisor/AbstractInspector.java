@@ -100,6 +100,7 @@ import com.fuzhu8.inspector.vpn.InspectorPacketCapture;
 import com.jaredrummler.android.processes.AndroidProcesses;
 import com.lahm.library.EasyProtectorLib;
 import com.nagapt.udog.UDogUnpacker;
+import com.sun.jna.Platform;
 import com.thomasking.sodumphelper.MainActivity;
 
 import org.apache.commons.io.FileUtils;
@@ -148,8 +149,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import capstone.Arm;
-import capstone.Arm_const;
 import capstone.Capstone;
 import cn.android.bridge.AndroidBridge;
 import cn.banny.utils.StringUtils;
@@ -1806,8 +1805,8 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 	}
 
-	public void dump(int startAddr, int lengthOrEndAddr) {
-		int length = lengthOrEndAddr;
+	public void dump(long startAddr, long lengthOrEndAddr) {
+		long length = lengthOrEndAddr;
 		if (lengthOrEndAddr >= startAddr) {
 			length = lengthOrEndAddr - startAddr;
 		}
@@ -1818,11 +1817,11 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		ByteBuffer memory = this.dexFileManager.dumpMemory(startAddr, length);
-		writeToConsole(new ByteBufferCache("dump_" + Integer.toHexString(startAddr).toUpperCase() + '-' + Integer.toHexString(startAddr + length).toUpperCase() + ".dat", memory));
+		writeToConsole(new ByteBufferCache("dump_" + Long.toHexString(startAddr).toUpperCase() + '-' + Long.toHexString(startAddr + length).toUpperCase() + ".dat", memory));
 	}
 
-	public void mem(int startAddr, int lengthOrEndAddr) {
-		int length = lengthOrEndAddr;
+	public void mem(long startAddr, long lengthOrEndAddr) {
+		long length = lengthOrEndAddr;
 		if (lengthOrEndAddr >= startAddr) {
 			length = lengthOrEndAddr - startAddr;
 		}
@@ -1833,7 +1832,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		ByteBuffer memory = this.dexFileManager.dumpMemory(startAddr, length);
-		inspect(memory, "memory 0x" + Integer.toHexString(startAddr).toUpperCase() + "-0x" + Integer.toHexString(startAddr + length).toUpperCase());
+		inspect(memory, "memory 0x" + Long.toHexString(startAddr).toUpperCase() + "-0x" + Long.toHexString(startAddr + length).toUpperCase());
 	}
 
 	public void dumpClass(String dexPath) {
@@ -2483,101 +2482,8 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		return new DefaultServerCommandCompleter(this, prefix);
 	}
 
-	private void print_ins_detail(Capstone.CsInsn ins) {
-		err_println(String.format("0x%x: %s %s", ins.address, ins.mnemonic, ins.opStr));
-
-		StringBuilder sb = new StringBuilder();
-		Arm.OpInfo operands = (Arm.OpInfo) ins.operands;
-		boolean opt = false;
-		if (operands.op.length != 0) {
-			sb.append(String.format("// op_count: %d\n", operands.op.length));
-			opt = true;
-			for (int c=0; c<operands.op.length; c++) {
-				Arm.Operand i = operands.op[c];
-				if (i.type == Arm_const.ARM_OP_SYSREG)
-					sb.append(String.format("// \toperands[%d].type: SYSREG = %d\n", c, i.value.reg));
-				if (i.type == Arm_const.ARM_OP_REG)
-					sb.append(String.format("// \toperands[%d].type: REG = %s\n", c, ins.regName(i.value.reg)));
-				if (i.type == Arm_const.ARM_OP_IMM)
-					sb.append(String.format("// \toperands[%d].type: IMM = 0x%x\n", c, i.value.imm));
-				if (i.type == Arm_const.ARM_OP_PIMM)
-					sb.append(String.format("// \toperands[%d].type: P-IMM = %d\n", c, i.value.imm));
-				if (i.type == Arm_const.ARM_OP_CIMM)
-					sb.append(String.format("// \toperands[%d].type: C-IMM = %d\n", c, i.value.imm));
-				if (i.type == Arm_const.ARM_OP_SETEND)
-					sb.append(String.format("// \toperands[%d].type: SETEND = %s\n", c, i.value.setend == Arm_const.ARM_SETEND_BE? "be" : "le"));
-				if (i.type == Arm_const.ARM_OP_FP)
-					sb.append(String.format("// \toperands[%d].type: FP = %f\n", c, i.value.fp));
-				if (i.type == Arm_const.ARM_OP_MEM) {
-					sb.append(String.format("// \toperands[%d].type: MEM\n",c));
-					String base = ins.regName(i.value.mem.base);
-					String index = ins.regName(i.value.mem.index);
-					if (base != null)
-						sb.append(String.format("// \t\toperands[%d].mem.base: REG = %s\n", c, base));
-					if (index != null)
-						sb.append(String.format("// \t\toperands[%d].mem.index: REG = %s\n", c, index));
-					if (i.value.mem.scale != 1)
-						sb.append(String.format("// \t\toperands[%d].mem.scale: %d\n", c, (i.value.mem.scale)));
-					if (i.value.mem.disp != 0)
-						sb.append(String.format("// \t\toperands[%d].mem.disp: 0x%x\n", c, (i.value.mem.disp)));
-				}
-				if (i.vector_index > 0)
-					sb.append(String.format("// \t\toperands[%d].vector_index = %d\n", c, (i.vector_index)));
-				if (i.shift.type != Arm_const.ARM_SFT_INVALID && i.shift.value > 0)
-					sb.append(String.format("// \t\tShift: %d = %d\n", i.shift.type, i.shift.value));
-				if (i.subtracted)
-					sb.append(String.format("// \t\toperands[%d].subtracted = True\n", c));
-			}
-		}
-		if (operands.writeback) {
-			sb.append("// Write-back: True\n");
-			opt = true;
-		}
-
-		if (operands.updateFlags) {
-			sb.append("// Update-flags: True\n");
-			opt = true;
-		}
-
-		if (operands.cc != Arm_const.ARM_CC_AL && operands.cc != Arm_const.ARM_CC_INVALID) {
-			sb.append(String.format("// Code condition: %d\n", operands.cc));
-			opt = true;
-		}
-
-		if (operands.cpsMode > 0) {
-			sb.append(String.format("// CPSI-mode: %d\n", operands.cpsMode));
-			opt = true;
-		}
-
-		if (operands.cpsFlag > 0) {
-			sb.append(String.format("// CPSI-flag: %d\n", operands.cpsFlag));
-			opt = true;
-		}
-
-		if (operands.vectorData > 0) {
-			sb.append(String.format("// Vector-data: %d\n", operands.vectorData));
-			opt = true;
-		}
-
-		if (operands.vectorSize > 0) {
-			sb.append(String.format("// Vector-size: %d\n", operands.vectorSize));
-			opt = true;
-		}
-
-		if (operands.usermode) {
-			sb.append("// User-mode: True\n");
-			opt = true;
-		}
-
-		if (opt) {
-			out_println(sb);
-		} else {
-			out_print(sb);
-		}
-	}
-
-	public void disasm(int startAddr, int lengthOrEndAddr) {
-		int length = lengthOrEndAddr;
+	public void disasm(long startAddr, long lengthOrEndAddr) {
+		long length = lengthOrEndAddr;
 		if (lengthOrEndAddr >= startAddr) {
 			length = lengthOrEndAddr - startAddr;
 		}
@@ -2595,12 +2501,18 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		byte[] code = new byte[memory.remaining()];
 		memory.get(code);
 
-		Capstone cs = new Capstone(Capstone.CS_ARCH_ARM, thumb ? Capstone.CS_MODE_THUMB : Capstone.CS_MODE_ARM);
+		final Capstone cs;
+		if (Platform.is64Bit()) {
+			cs = new Capstone(Capstone.CS_ARCH_ARM64, Capstone.CS_MODE_ARM);
+		} else {
+			cs = new Capstone(Capstone.CS_ARCH_ARM, thumb ? Capstone.CS_MODE_THUMB : Capstone.CS_MODE_ARM);
+		}
+		inspect(code, "disasm armv8=" + Platform.is64Bit());
 		try {
 			cs.setDetail(Capstone.CS_OPT_ON);
 			Capstone.CsInsn[] insns = cs.disasm(code, startAddr);
-			for (Capstone.CsInsn insn : insns) {
-				print_ins_detail(insn);
+			for (Capstone.CsInsn ins : insns) {
+				out_println(String.format("0x%x: %s %s", ins.address, ins.mnemonic, ins.opStr));
 			}
 		} finally {
 			cs.close();
