@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 static struct CookieMap *allCookie = NULL;
 

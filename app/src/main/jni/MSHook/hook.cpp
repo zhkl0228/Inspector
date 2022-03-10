@@ -4,7 +4,6 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include "util.h"
-#include "log.h"
 
 #include "Hooker.h"
 #include "hook.h"

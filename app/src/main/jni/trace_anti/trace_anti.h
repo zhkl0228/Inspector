@@ -12,6 +12,10 @@
 #include "dvm.h"
 #include "hook.h"
 
+#ifndef PAGESIZE
+#define PAGESIZE (size_t)(sysconf(_SC_PAGESIZE))
+#endif
+
 #define TK_LOG_TAG "TraceAnti"
 #define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, TK_LOG_TAG, fmt, ##args)
 

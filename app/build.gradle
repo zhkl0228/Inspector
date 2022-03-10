@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.fuzhu8.inspector"
-        minSdkVersion 19
+        minSdkVersion 25
         //noinspection ExpiredTargetSdkVersion,OldTargetApi
         targetSdkVersion 25
         versionCode 260
@@ -14,16 +14,16 @@ android {
         multiDexEnabled true
 
         ndk {
-            abiFilters 'armeabi', 'x86', 'arm64-v8a'
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
 
-        signingConfigs {
+        /*signingConfigs {
             debug {
                 storeFile file("debug.keystore")
                 keyAlias "debug"
                 keyPassword "android"
             }
-        }
+        }*/
     }
 
     buildTypes {
@@ -44,40 +44,42 @@ android {
         exclude 'META-INF/LICENSE'
         exclude 'lib/osx_x64/libkpcap.dylib'
     }
+
+    ndkPath "${System.properties['user.home']}/Library/Android/android-ndk-r11c"
 }
 
 dependencies {
-    compile project(":api")
+    implementation project(":api")
 
-    compile 'com.intellij:annotations:12.0'
+    implementation 'com.intellij:annotations:12.0'
     //noinspection GradleDependency
-    compile 'org.ow2.asm:asm:5.0.3'
-    compile 'com.alibaba:dns-cache-manipulator:1.5.1.android'
-    compile 'com.android:dx:1.10'
+    implementation 'org.ow2.asm:asm:5.0.3'
+    implementation 'com.alibaba:dns-cache-manipulator:1.5.1.android'
+    implementation 'com.android:dx:1.10'
     //noinspection GradleDependency
-    compile 'uk.com.robust-it:cloning:1.9.2'
-    compile 'jadx.core.clsp.core:android:5.1'
+    implementation 'uk.com.robust-it:cloning:1.9.2'
+    implementation 'jadx.core.clsp.core:android:5.1'
 
-    compile 'org.antlr:antlr-runtime:3.5.2'
+    implementation 'org.antlr:antlr-runtime:3.5.2'
     //noinspection GradleDependency
-    compile 'com.google.guava:guava:20.0'
+    implementation 'com.google.guava:guava:20.0'
 
-    compile 'cn.banny:epic:0.3.6'
+    implementation 'cn.banny:epic:0.3.6'
 
-    compile 'eu.chainfire:libsuperuser:1.0.0.201608240809'
+    implementation 'eu.chainfire:libsuperuser:1.0.0.201608240809'
 
-    compile 'com.facebook.stetho:stetho:1.5.0'
-    compile 'com.facebook.stetho:stetho-urlconnection:1.5.0'
+    implementation 'com.facebook.stetho:stetho:1.5.0'
+    implementation 'com.facebook.stetho:stetho-urlconnection:1.5.0'
 
     //noinspection GradleDependency
-    compile 'com.lahm.library:easy-protector-release:1.1.0'
+    implementation 'com.lahm.library:easy-protector-release:1.1.0'
 
-    compile 'com.madgag.spongycastle:core:1.54.0.0'
-    compile 'com.madgag.spongycastle:prov:1.54.0.0'
-    compile 'com.madgag.spongycastle:pkix:1.54.0.0'
+    implementation 'com.madgag.spongycastle:core:1.54.0.0'
+    implementation 'com.madgag.spongycastle:prov:1.54.0.0'
+    implementation 'com.madgag.spongycastle:pkix:1.54.0.0'
 
-    provided 'de.robv.android.xposed:XposedBridgeApi:60'
-    provided 'android:full_framework:15'
-    provided 'cn.android.bridge:AndroidBridge:90'
+    compileOnly 'de.robv.android.xposed:XposedBridgeApi:60'
+    compileOnly 'android:full_framework:15'
+    compileOnly 'cn.android.bridge:AndroidBridge:90'
 }
 

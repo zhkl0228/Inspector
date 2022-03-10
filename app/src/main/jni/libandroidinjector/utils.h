@@ -13,12 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#ifdef ANDROID
-#include <linux/user.h>
-#else
-#include <sys/user.h>
-#endif
-
 
 #include <stdarg.h>
 #include <elf.h>

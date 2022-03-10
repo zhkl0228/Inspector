@@ -7,8 +7,6 @@ android {
         minSdkVersion 19
         //noinspection ExpiredTargetSdkVersion,OldTargetApi
         targetSdkVersion 25
-        versionCode 260
-        versionName "2.6.0"
     }
 
     buildTypes {
@@ -20,27 +18,27 @@ android {
 }
 
 dependencies {
-    compile('com.github.zhkl0228:tcpcap:1.1.2') {
+    api('com.github.zhkl0228:tcpcap:1.1.2') {
         exclude group: '*'
     }
 
-    compile('com.github.zhkl0228:kraken-pcap:1.7.1') {
+    api('com.github.zhkl0228:kraken-pcap:1.7.1') {
         exclude group: '*'
     }
-    compile('com.github.zhkl0228:kraken-http-decoder:1.1.0') {
+    api('com.github.zhkl0228:kraken-http-decoder:1.1.0') {
         exclude group: '*'
     }
 
     //noinspection GradleDependency
-    compile 'com.alibaba:fastjson:1.1.55.android'
+    api 'com.alibaba:fastjson:1.1.55.android'
     //noinspection GradleDependency
-    compile 'org.slf4j:slf4j-api:1.7.10'
+    api 'org.slf4j:slf4j-api:1.7.10'
     //noinspection GradleDependency
-    compile 'commons-io:commons-io:2.2'
-    compile 'com.github.zhkl0228:utils:0.0.14'
+    api 'commons-io:commons-io:2.2'
+    api 'com.github.zhkl0228:utils:0.0.14'
 
-    provided 'cn.banny:stetho:1.5.0'
+    compileOnly 'cn.banny:stetho:1.5.0'
     //noinspection GradleDependency
-    provided 'com.google.code.findbugs:jsr305:3.0.1'
-    provided 'android:full_framework:15'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.1'
+    compileOnly 'android:full_framework:15'
 }

@@ -5,7 +5,6 @@
           android:installLocation="internalOnly">
 
     <uses-sdk
-        android:minSdkVersion="25"
         android:targetSdkVersion="25"
         tools:ignore="GradleOverrides,OldTargetApi"/>
 

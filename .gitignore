@@ -14,3 +14,4 @@ app/debug.keystore
 app/lint.xml
 import-summary.txt
 local.properties
+/app/.cxx/

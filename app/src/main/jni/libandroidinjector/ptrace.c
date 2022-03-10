@@ -12,11 +12,6 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <errno.h>
-#ifdef ANDROID
-#include <linux/user.h>
-#else
-#include <sys/user.h>
-#endif
 
 #include <sys/types.h>
 #include <sys/wait.h>

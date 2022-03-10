@@ -4,8 +4,6 @@
  *  Created on: 2015年10月12日
  *      Author: zhkl0228
  */
-#include <asm/unistd.h>
-#include <machine/asm.h>
 
 .global my_add
 my_add:
