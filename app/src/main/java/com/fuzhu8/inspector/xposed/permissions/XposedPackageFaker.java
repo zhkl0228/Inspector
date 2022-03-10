@@ -43,6 +43,8 @@ public class XposedPackageFaker implements FakeParsePackageResult {
 			permissionFaker = new PermissionFaker21(context, pref, permissionsAdd);
 		} else if(Build.VERSION.SDK_INT <= 23) {
 			permissionFaker = new PermissionFaker23(context, pref, permissionsAdd);
+		} else if(Build.VERSION.SDK_INT <= 31) {
+			permissionFaker = new PermissionFaker31(context, pref, permissionsAdd);
 		} else {
 			permissionFaker = null;
 		}
@@ -61,6 +63,7 @@ public class XposedPackageFaker implements FakeParsePackageResult {
 	public void fakePackageManagerService(Class<?> packageManagerServiceClass) {
 		if (permissionFaker != null) {
 			permissionFaker.fakePackageManagerService(packageManagerServiceClass);
+			return;
 		}
 
 		// 以下防止调试时，被am杀掉进程

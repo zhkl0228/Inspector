@@ -15,8 +15,6 @@ import com.fuzhu8.inspector.xposed.XposedRootUtilServer;
 import com.fuzhu8.inspector.xposed.permissions.FakeParsePackageResult;
 import com.fuzhu8.inspector.xposed.permissions.XposedPackageFaker;
 
-import org.apache.commons.io.FileUtils;
-
 import java.io.File;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -49,17 +47,8 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 		XSharedPreferences pref = new XSharedPreferences(BuildConfig.APPLICATION_ID);
 		modulePath = startupParam.modulePath;
 
-		switch (Build.VERSION.SDK_INT) {
-			case 25: // android 7.1.2
-			case 31: // android 12.0.0
-				return;
-		}
-
-		try {
-			File tmp = new File(Environment.getExternalStorageDirectory(), "inspector");
-			FileUtils.deleteQuietly(tmp);
-		} catch (Throwable throwable) {
-			XposedBridge.log(throwable);
+		if (Build.VERSION.SDK_INT == 25) { // android 7.1.2
+			return;
 		}
 		
 		try {
