@@ -9,6 +9,7 @@ import com.fuzhu8.inspector.ModuleContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XSharedPreferences;
@@ -69,7 +70,7 @@ public class XposedPackageFaker implements FakeParsePackageResult {
 		// 以下防止调试时，被am杀掉进程
 		try {
 			ClassLoader classLoader = packageManagerServiceClass.getClassLoader();
-			Class<?> activityManagerServiceClass = classLoader.loadClass("com.android.server.am.ActivityManagerService");
+			Class<?> activityManagerServiceClass = Objects.requireNonNull(classLoader).loadClass("com.android.server.am.ActivityManagerService");
 			Class<?> processRecordClass = classLoader.loadClass("com.android.server.am.ProcessRecord");
 			XposedHelpers.findAndHookMethod(activityManagerServiceClass, "killAppAtUsersRequest", processRecordClass, Dialog.class, new XC_MethodReplacement() {
 				@Override
