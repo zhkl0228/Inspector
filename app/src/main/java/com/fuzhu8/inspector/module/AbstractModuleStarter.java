@@ -7,9 +7,9 @@ import android.os.Build;
 import android.os.Process;
 
 import com.fuzhu8.inspector.Inspector;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.LoadLibraryFake;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.advisor.Hooker;
 import com.fuzhu8.inspector.dex.DexFileManager;
 import com.fuzhu8.inspector.jni.Feature;
@@ -22,6 +22,7 @@ import com.fuzhu8.inspector.sdk.Sdk21;
 import com.fuzhu8.inspector.sdk.Sdk23;
 import com.fuzhu8.inspector.sdk.Sdk25;
 import com.fuzhu8.inspector.sdk.Sdk26;
+import com.fuzhu8.inspector.sdk.Sdk31;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 
@@ -56,6 +57,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 	protected abstract void log(Throwable t);
 
 	@SuppressLint({"PrivateApi", "Assert"})
+	@SuppressWarnings("deprecation")
 	@Override
 	public final void startModule(final ApplicationInfo appInfo, String processName, File moduleDataDir, String collect_bytecode_text, ClassLoader classLoader) {
 		if (debug) {
@@ -152,6 +154,10 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 
 	@SuppressLint("ObsoleteSdkInt")
 	public static Sdk createSdk() {
+		if (Build.VERSION.SDK_INT >= 31) {
+			return new Sdk31(); // 12.0
+		}
+
 		if (Build.VERSION.SDK_INT >= 26) {
 			return new Sdk26(); // Oreo
 		}

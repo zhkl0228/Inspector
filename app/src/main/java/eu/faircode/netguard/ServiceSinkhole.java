@@ -1,6 +1,7 @@
 package eu.faircode.netguard;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -722,6 +724,24 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     private boolean isDomainBlocked(String name) {
         Log.d(TAG, "check block domain name=" + name);
         return false;
+    }
+
+    // Called from native code
+    @TargetApi(Build.VERSION_CODES.Q)
+    private int getUidQ(int version, int protocol, String saddr, int sport, String daddr, int dport) {
+        if (protocol != 6 /* TCP */ && protocol != 17 /* UDP */)
+            return Process.INVALID_UID;
+
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        if (cm == null)
+            return Process.INVALID_UID;
+
+        InetSocketAddress local = new InetSocketAddress(saddr, sport);
+        InetSocketAddress remote = new InetSocketAddress(daddr, dport);
+
+        int uid = cm.getConnectionOwnerUid(protocol, local, remote);
+        Log.i(TAG, "Get uid local=" + local + " remote=" + remote + ", uid=" + uid);
+        return uid;
     }
 
     private boolean isSupported(int protocol) {

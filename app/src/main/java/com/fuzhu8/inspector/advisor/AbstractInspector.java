@@ -1999,7 +1999,12 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		try {
-			Method method = Runtime.class.getDeclaredMethod("doLoad", String.class, ClassLoader.class);
+			Method method;
+			try {
+				method = Runtime.class.getDeclaredMethod("doLoad", String.class, ClassLoader.class);
+			} catch(NoSuchMethodException e) {
+				method = Runtime.class.getDeclaredMethod("nativeLoad", String.class, ClassLoader.class);
+			}
 			context.getHooker().hookMethod(method, new MethodHookAdapter() {
 				private final Set<String> loadedSet = new HashSet<>();
 				@Override

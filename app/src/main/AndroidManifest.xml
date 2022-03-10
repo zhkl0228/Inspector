@@ -5,7 +5,6 @@
           android:installLocation="internalOnly">
 
     <uses-sdk
-        android:targetSdkVersion="25"
         tools:ignore="GradleOverrides,OldTargetApi"/>
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
@@ -40,7 +39,8 @@
 
         <activity
             android:name=".ui.SettingsActivity"
-            android:label="@string/title_activity_settings">
+            android:label="@string/title_activity_settings"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -49,7 +49,8 @@
         </activity>
         <activity
             android:name=".ui.LauncherActivity"
-            android:label="@string/title_activity_launcher">
+            android:label="@string/title_activity_launcher"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 

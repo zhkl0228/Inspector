@@ -51,6 +51,7 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 
 		switch (Build.VERSION.SDK_INT) {
 			case 25: // android 7.1.2
+			case 31: // android 12.0.0
 				return;
 		}
 
@@ -88,7 +89,7 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 			if(packageFakerResult != null) {
 				XposedBridge.log("initZygote XposedPackagePermissions successfully!");
 			} else {
-				XposedBridge.log("initZygote XposedPackagePermissions failed: " + Build.VERSION.SDK_INT);
+				XposedBridge.log("initZygote XposedPackagePermissions failed for sdk: " + Build.VERSION.SDK_INT);
 			}
 
 			/*if (Build.VERSION.SDK_INT == 19) {
@@ -131,9 +132,6 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see de.robv.android.xposed.IXposedHookLoadPackage#handleLoadPackage(de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam)
-	 */
 	@SuppressLint("PrivateApi")
 	@Override
 	public void handleLoadPackage(LoadPackageParam lpparam) {

@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
+    compileSdkVersion 31
     useLibrary 'org.apache.http.legacy'
 
     defaultConfig {
         applicationId "com.fuzhu8.inspector"
         minSdkVersion 25
         //noinspection ExpiredTargetSdkVersion,OldTargetApi
-        targetSdkVersion 25
+        targetSdkVersion 31
         versionCode 260
         versionName "2.6.0"
         multiDexEnabled true

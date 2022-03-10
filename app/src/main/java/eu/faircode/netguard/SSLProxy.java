@@ -278,7 +278,7 @@ public class SSLProxy implements Runnable {
 
             final InetSocketAddress client = (InetSocketAddress) local.getRemoteSocketAddress();
             final InetSocketAddress server = (InetSocketAddress) socket.getRemoteSocketAddress();
-            InputStream localIn = local.getInputStream();
+            InputStream localIn = local.getInputStream(); // 这里异常可能是证书没有被信任
             OutputStream localOut = local.getOutputStream();
             InputStream socketIn = socket.getInputStream();
             OutputStream socketOut = socket.getOutputStream();
