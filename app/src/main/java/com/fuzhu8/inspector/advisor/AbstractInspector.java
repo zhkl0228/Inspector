@@ -29,6 +29,7 @@ import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
 import android.os.Looper;
+import android.os.NetworkOnMainThreadException;
 import android.os.Process;
 import android.os.StatFs;
 import android.provider.Settings;
@@ -148,6 +149,7 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import capstone.Capstone;
 import cn.android.bridge.AndroidBridge;
@@ -696,7 +698,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 					super.log(e);
 				}
 				try {
-					Thread.sleep(1000);
+					TimeUnit.SECONDS.sleep(1);
 				} catch (InterruptedException ignored) {
 				}
 			} catch (Exception t) {
@@ -1028,6 +1030,8 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			closeConsole();
+		} catch (NetworkOnMainThreadException e) {
+			cacheQueue.offer(cache);
 		}
 	}
 
