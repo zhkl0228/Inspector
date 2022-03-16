@@ -10,6 +10,8 @@ import android.content.pm.ApplicationInfo;
  *
  */
 public interface Sdk {
+
+	String INSPECTOR_PLUGIN_META_KEY = "inspector_plugin";
 	
 	/**
 	 * DexFile.defineClass

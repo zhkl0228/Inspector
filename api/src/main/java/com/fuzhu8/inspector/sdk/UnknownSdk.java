@@ -9,6 +9,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author zhkl0228
@@ -41,11 +42,11 @@ abstract class UnknownSdk implements Sdk {
 				continue;
 
 			if(app.metaData == null ||
-					getClass().getPackage().getName().equals(app.packageName)) {
+					Objects.requireNonNull(getClass().getPackage()).getName().equals(app.packageName)) {
 				continue;
 			}
 			
-			if(!app.metaData.containsKey("inspector_plugin")) {
+			if(!app.metaData.containsKey(INSPECTOR_PLUGIN_META_KEY)) {
 				continue;
 			}
 			
