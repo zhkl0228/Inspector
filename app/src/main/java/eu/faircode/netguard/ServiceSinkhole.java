@@ -287,17 +287,16 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         Log.i(TAG, "DNS system=" + TextUtils.join(",", sysDns));
 
         // Use system DNS servers only when no two custom DNS servers specified
-        if (listDns.size() <= 1)
-            for (String def_dns : sysDns)
-                try {
-                    InetAddress ddns = InetAddress.getByName(def_dns);
-                    if (!listDns.contains(ddns) &&
-                            !(ddns.isLoopbackAddress() || ddns.isAnyLocalAddress()) &&
-                            ddns instanceof Inet4Address)
-                        listDns.add(ddns);
-                } catch (Throwable ex) {
-                    Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-                }
+        for (String def_dns : sysDns)
+            try {
+                InetAddress ddns = InetAddress.getByName(def_dns);
+                if (!listDns.contains(ddns) &&
+                        !(ddns.isLoopbackAddress() || ddns.isAnyLocalAddress()) &&
+                        ddns instanceof Inet4Address)
+                    listDns.add(ddns);
+            } catch (Throwable ex) {
+                Log.e(TAG, ex + "\n" + Log.getStackTraceString(ex));
+            }
 
         return listDns;
     }
