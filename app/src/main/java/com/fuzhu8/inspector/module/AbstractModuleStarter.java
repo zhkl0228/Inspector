@@ -66,8 +66,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 
 		final Hooker hooker = createHooker();
 		ClassLoader myLoader = AbstractModuleStarter.class.getClassLoader();
-		ClassLoader moduleClassLoader = new ModuleClassLoader(myLoader, classLoader);
-		final ModuleContext context = new InspectorModuleContext(moduleClassLoader,
+		final ModuleContext context = new InspectorModuleContext(myLoader,
 				processName,
 				moduleDataDir,
 				appInfo.dataDir,
@@ -97,7 +96,7 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 		}
 
 		try {
-			context.discoverPlugins(dexFileManager, inspector, scriptManager, moduleClassLoader, hooker);
+			context.discoverPlugins(dexFileManager, inspector, scriptManager, myLoader, hooker);
 		} catch(Throwable t) {
 			log(t);
 		}
