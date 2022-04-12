@@ -36,6 +36,7 @@ public class Packet {
     public int dport;
     public String data;
     public int uid;
+    public byte[] payload;
     public boolean allowed;
 
     public Packet() {

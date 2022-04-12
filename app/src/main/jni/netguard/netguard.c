@@ -845,6 +845,7 @@ jfieldID fidDaddr = NULL;
 jfieldID fidDport = NULL;
 jfieldID fidData = NULL;
 jfieldID fidUid = NULL;
+jfieldID fidPayload = NULL;
 jfieldID fidAllowed = NULL;
 
 jobject create_packet(const struct arguments *args,
@@ -857,6 +858,8 @@ jobject create_packet(const struct arguments *args,
                       jint dport,
                       const char *data,
                       jint uid,
+                      const uint8_t *payload,
+                      size_t payload_size,
                       jboolean allowed) {
     JNIEnv *env = args->env;
 
@@ -890,6 +893,7 @@ jobject create_packet(const struct arguments *args,
         fidDport = jniGetFieldID(env, clsPacket, "dport", "I");
         fidData = jniGetFieldID(env, clsPacket, "data", string);
         fidUid = jniGetFieldID(env, clsPacket, "uid", "I");
+        fidPayload = jniGetFieldID(env, clsPacket, "payload", "[B");
         fidAllowed = jniGetFieldID(env, clsPacket, "allowed", "Z");
     }
 
@@ -916,6 +920,13 @@ jobject create_packet(const struct arguments *args,
     (*env)->SetObjectField(env, jpacket, fidData, jdata);
     (*env)->SetIntField(env, jpacket, fidUid, uid);
     (*env)->SetBooleanField(env, jpacket, fidAllowed, allowed);
+
+    if(payload && payload_size > 0) {
+        jbyteArray jPayload = (*env)->NewByteArray(env, (jsize) payload_size);
+        (*env)->SetByteArrayRegion(env, jPayload, 0, (jsize) payload_size, (jbyte *)payload);
+        (*env)->SetObjectField(env, jpacket, fidPayload, jPayload);
+        (*env)->DeleteLocalRef(env, jPayload);
+    }
 
     (*env)->DeleteLocalRef(env, jdata);
     (*env)->DeleteLocalRef(env, jdest);

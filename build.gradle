@@ -14,7 +14,7 @@ buildscript {
 allprojects {
     repositories {
         mavenLocal()
-        maven{
+        maven {
             url 'http://192.168.31.88:8081/nexus/content/groups/public/'
             allowInsecureProtocol true
         }

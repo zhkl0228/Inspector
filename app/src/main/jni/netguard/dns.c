@@ -222,7 +222,7 @@ void parse_dns_response(const struct arguments *args, const struct ng_session *s
             jobject objPacket = create_packet(
                     args, version, s->protocol, "",
                     source, sport, dest, dport,
-                    name, 0, 0);
+                    name, 0, NULL, 0, 0);
             log_packet(args, objPacket);
         }
     } else if (acount > 0)

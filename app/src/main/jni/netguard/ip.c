@@ -123,7 +123,7 @@ void handle_ip(const struct arguments *args,
     char flags[10];
     char data[16];
     int flen = 0;
-    uint8_t *payload;
+    uint8_t *payload = NULL;
 
     // Get protocol, addresses & payload
     uint8_t version = (*pkt) >> 4;
@@ -208,6 +208,8 @@ void handle_ip(const struct arguments *args,
     uint16_t sport = 0;
     uint16_t dport = 0;
     *data = 0;
+    const uint8_t *p_payload = NULL;
+    uint16_t p_payload_size = 0;
     if (protocol == IPPROTO_ICMP || protocol == IPPROTO_ICMPV6) {
         if (length - (payload - pkt) < ICMP_MINLEN) {
             log_android(ANDROID_LOG_WARN, "ICMP packet too short");
@@ -234,6 +236,9 @@ void handle_ip(const struct arguments *args,
         dport = ntohs(udp->dest);
 
         // TODO checksum (IPv6)
+
+        p_payload = payload + sizeof(struct udphdr);
+        p_payload_size = length - (p_payload - pkt);
     } else if (protocol == IPPROTO_TCP) {
         if (length - (payload - pkt) < sizeof(struct tcphdr)) {
             log_android(ANDROID_LOG_WARN, "TCP packet too short");
@@ -259,6 +264,10 @@ void handle_ip(const struct arguments *args,
             flags[flen++] = 'R';
 
         // TODO checksum
+
+        const uint8_t tcpoptlen = (uint8_t) ((tcp->doff - 5) * 4);
+        p_payload = payload + sizeof(struct tcphdr) + tcpoptlen;
+        p_payload_size = (const uint16_t) (length - (p_payload - pkt));
     } else if (protocol != IPPROTO_HOPOPTS && protocol != IPPROTO_IGMP && protocol != IPPROTO_ESP)
         log_android(ANDROID_LOG_WARN, "Unknown protocol %d", protocol);
 
@@ -299,8 +308,11 @@ void handle_ip(const struct arguments *args,
     else if (protocol == IPPROTO_TCP && (!syn || (uid == 0 && dport == 53)))
         allowed = 1; // assume existing session
     else {
+        if(p_payload_size >= get_mtu()) {
+            p_payload_size = 0;
+        }
         jobject objPacket = create_packet(
-                args, version, protocol, flags, source, sport, dest, dport, data, uid, 0);
+                args, version, protocol, flags, source, sport, dest, dport, data, uid, p_payload, p_payload_size, 0);
         redirect = is_address_allowed(args, objPacket);
         allowed = (redirect != NULL);
         if (redirect != NULL && (*redirect->raddr == 0 || redirect->rport == 0))

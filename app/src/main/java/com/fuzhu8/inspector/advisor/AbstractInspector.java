@@ -649,6 +649,17 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		println(line);
 	}
 
+	private String lastConnectedHost;
+
+	public void setLastConnectedHost(String lastConnectedHost) {
+		this.lastConnectedHost = lastConnectedHost;
+	}
+
+	@Override
+	public String getLastConnectedHost() {
+		return lastConnectedHost;
+	}
+
 	/* (non-Javadoc)
 	 * @see java.lang.Runnable#run()
 	 */
@@ -1168,6 +1179,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 	private void closeConsole() {
 		if (console != null) {
+			lastConnectedHost = null;
 			onClosed(console);
 
 			console.close();
@@ -2660,38 +2672,5 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			}
 		}
 		return null;
-	}
-
-	@SuppressWarnings("unused")
-	private void startStetho() {
-		startStetho(null);
-	}
-
-	@Override
-	public boolean startStetho(Stetho.Initializer initializer) {
-		try {
-			if (appContext != null) {
-				if (initializer == null) {
-					initializer = new Stetho.Initializer(appContext) {
-						@Override
-						protected Iterable<DumperPlugin> getDumperPlugins() {
-							return new Stetho.DefaultDumperPluginsBuilder(appContext).finish();
-						}
-						@Override
-						protected Iterable<ChromeDevtoolsDomain> getInspectorModules() {
-							return new Stetho.DefaultInspectorModulesBuilder(appContext).finish();
-						}
-					};
-				}
-				new StethoInitializer().initialize(initializer, context);
-				println("start stetho successfully.");
-				return true;
-			} else {
-				err_println("start stetho failed as app context is null.");
-			}
-		} catch (Throwable e) {
-			println(e);
-		}
-		return false;
 	}
 }

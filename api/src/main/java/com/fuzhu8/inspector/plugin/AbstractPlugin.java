@@ -480,15 +480,15 @@ public abstract class AbstractPlugin implements Plugin {
 
 					String set = "";
 					if (sb.toString().length() > 1) {
-						set = sb.toString().substring(0, sb.length() - 1);
+						set = sb.substring(0, sb.length() - 1);
 					}
 
 					String whereArgs = "";
 					if (sbuff.toString().length() > 1) {
-						whereArgs = sbuff.toString().substring(0, sbuff.length() - 1);
+						whereArgs = sbuff.substring(0, sbuff.length() - 1);
 					}
 
-					inspector.err_println("UPDATE " + param.args[0] + " SET " + set + "" + " WHERE " + param.args[2] + "" + whereArgs);
+					inspector.err_println("UPDATE " + param.args[0] + " SET " + set + "" + " WHERE " + param.args[2] + " " + whereArgs);
 				}
 			}, true);
 

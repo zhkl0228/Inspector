@@ -1,6 +1,5 @@
 package com.fuzhu8.inspector;
 
-import com.facebook.stetho.Stetho;
 import com.fuzhu8.inspector.completer.ServerCommandCompleter;
 import com.fuzhu8.inspector.io.InspectCache;
 import com.fuzhu8.inspector.unicorn.Emulator;
@@ -65,8 +64,6 @@ public interface Inspector extends Runnable, Appender {
 
     void printHelp();
 
-	/**
-	 * manual start stetho with initializer
-	 */
-	boolean startStetho(Stetho.Initializer initializer);
+	String getLastConnectedHost();
+
 }

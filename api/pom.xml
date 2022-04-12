@@ -35,16 +35,11 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>android</groupId>
+			<groupId>com.google.android</groupId>
 			<artifactId>android</artifactId>
-			<version>4.4.2_r4</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>cn.banny</groupId>
-			<artifactId>stetho</artifactId>
-			<version>1.5.0</version>
-			<scope>provided</scope>
+			<version>4.4.2_r2</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/libs/android-4.4.2_r2.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>com.github.zhkl0228</groupId>
@@ -85,19 +80,20 @@
 			<groupId>android</groupId>
 			<artifactId>full_framework</artifactId>
 			<version>15</version>
-			<scope>provided</scope>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/libs/full_framework-15.jar</systemPath>
 		</dependency>
 	</dependencies>
 	<distributionManagement>
 		<repository>
 			<id>releases</id>
 			<name>Releases Repository</name>
-			<url>http://p.gzmtx.cn:8081/nexus/content/repositories/releases/</url>
+			<url>http://8nny.vicp.net:8081/nexus/content/repositories/releases/</url>
 		</repository>
 		<snapshotRepository>
 			<id>snapshots</id>
 			<name>Snapshots Repository</name>
-			<url>http://p.gzmtx.cn:8081/nexus/content/repositories/snapshots/</url>
+			<url>http://8nny.vicp.net:8081/nexus/content/repositories/snapshots/</url>
 		</snapshotRepository>
 	</distributionManagement>
 </project>

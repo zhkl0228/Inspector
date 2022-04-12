@@ -301,7 +301,7 @@ void check_allowed(const struct arguments *args) {
 
                 jobject objPacket = create_packet(
                         args, s->icmp.version, IPPROTO_ICMP, "",
-                        source, 0, dest, 0, "", s->icmp.uid, 0);
+                        source, 0, dest, 0, "", s->icmp.uid, NULL, 0, 0);
                 if (is_address_allowed(args, objPacket) == NULL) {
                     s->icmp.stop = 1;
                     log_android(ANDROID_LOG_WARN, "ICMP terminate %d uid %d",
@@ -321,7 +321,7 @@ void check_allowed(const struct arguments *args) {
 
                 jobject objPacket = create_packet(
                         args, s->udp.version, IPPROTO_UDP, "",
-                        source, ntohs(s->udp.source), dest, ntohs(s->udp.dest), "", s->udp.uid, 0);
+                        source, ntohs(s->udp.source), dest, ntohs(s->udp.dest), "", s->udp.uid, NULL, 0, 0);
                 if (is_address_allowed(args, objPacket) == NULL) {
                     s->udp.state = UDP_FINISHING;
                     log_android(ANDROID_LOG_WARN, "UDP terminate session socket %d uid %d",
@@ -353,7 +353,7 @@ void check_allowed(const struct arguments *args) {
 
                 jobject objPacket = create_packet(
                         args, s->tcp.version, IPPROTO_TCP, "",
-                        source, ntohs(s->tcp.source), dest, ntohs(s->tcp.dest), "", s->tcp.uid, 0);
+                        source, ntohs(s->tcp.source), dest, ntohs(s->tcp.dest), "", s->tcp.uid, NULL, 0, 0);
                 if (is_address_allowed(args, objPacket) == NULL) {
                     write_rst(args, &s->tcp);
                     log_android(ANDROID_LOG_WARN, "TCP terminate socket %d uid %d",

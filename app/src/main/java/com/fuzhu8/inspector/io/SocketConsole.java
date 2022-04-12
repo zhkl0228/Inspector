@@ -68,6 +68,8 @@ public class SocketConsole implements Console {
 			data = new byte[length];
 			reader.readFully(data);
 			return new PcapCommand(data);
+		case 5:
+			return new AddressCommand(reader.readUTF());
 		default:
 			throw new IllegalArgumentException("Unknown command: " + type);
 		}

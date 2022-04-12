@@ -530,6 +530,8 @@ jobject create_packet(const struct arguments *args,
                       jint dport,
                       const char *data,
                       jint uid,
+                      const uint8_t *payload,
+                      size_t payload_size,
                       jboolean allowed);
 
 void notify_packet(const struct arguments *args, const uint8_t *buffer, size_t length, jint uid);

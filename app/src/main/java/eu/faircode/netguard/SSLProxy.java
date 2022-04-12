@@ -25,8 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import javax.net.ssl.HandshakeCompletedEvent;
-import javax.net.ssl.HandshakeCompletedListener;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLServerSocket;
@@ -64,25 +62,19 @@ public class SSLProxy implements Runnable {
             final HandshakeStatus status = handshakeStatusMap.get(server);
             if (status == null || status == HandshakeStatus.failed1) {
                 handshakeStatusMap.put(server, HandshakeStatus.handshaking);
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try (Socket socket = connectServer(new ServerCertificateNotifier() {
-                            @Override
-                            public void handshakeCompleted(ServerCertificate serverCertificate) {
-                                try {
-                                    serverCertificate.createSSLContext(rootCert, privateKey, server);
-                                } catch (Exception e) {
-                                    Log.w(ServiceSinkhole.TAG, "create ssl context failed", e);
-                                }
-                            }
-                        }, vpn, timeout, packet)) {
-                            Log.d(ServiceSinkhole.TAG, "handshake success: socket=" + socket);
-                            handshakeStatusMap.put(server, HandshakeStatus.success);
+                Thread thread = new Thread(() -> {
+                    try (Socket socket = connectServer(serverCertificate -> {
+                        try {
+                            serverCertificate.createSSLContext(rootCert, privateKey, server);
                         } catch (Exception e) {
-                            Log.w(ServiceSinkhole.TAG, "handshake failed: " + server, e);
-                            handshakeStatusMap.put(server, status == null ? HandshakeStatus.failed1 : HandshakeStatus.failed2);
+                            Log.w(ServiceSinkhole.TAG, "create ssl context failed", e);
                         }
+                    }, vpn, timeout, packet)) {
+                        Log.d(ServiceSinkhole.TAG, "handshake success: socket=" + socket);
+                        handshakeStatusMap.put(server, HandshakeStatus.success);
+                    } catch (Exception e) {
+                        Log.w(ServiceSinkhole.TAG, "handshake failed: " + server, e);
+                        handshakeStatusMap.put(server, status == null ? HandshakeStatus.failed1 : HandshakeStatus.failed2);
                     }
                 });
                 thread.setDaemon(true);
@@ -165,19 +157,16 @@ public class SSLProxy implements Runnable {
 
             socket = (SSLSocket) context.getSocketFactory().createSocket(app, packet.daddr, packet.dport, true);
             final CountDownLatch countDownLatch = new CountDownLatch(1);
-            socket.addHandshakeCompletedListener(new HandshakeCompletedListener() {
-                @Override
-                public void handshakeCompleted(HandshakeCompletedEvent event) {
-                    try {
-                        X509Certificate peerCertificate = (X509Certificate) event.getPeerCertificates()[0];
-                        if (notifier != null) {
-                            notifier.handshakeCompleted(new ServerCertificate(peerCertificate));
-                        }
-                        countDownLatch.countDown();
-                        Log.d(ServiceSinkhole.TAG, "handshakeCompleted event=" + event);
-                    } catch (SSLPeerUnverifiedException e) {
-                        Log.d(ServiceSinkhole.TAG, "handshakeCompleted failed", e);
+            socket.addHandshakeCompletedListener(event -> {
+                try {
+                    X509Certificate peerCertificate = (X509Certificate) event.getPeerCertificates()[0];
+                    if (notifier != null) {
+                        notifier.handshakeCompleted(new ServerCertificate(peerCertificate));
                     }
+                    countDownLatch.countDown();
+                    Log.d(ServiceSinkhole.TAG, "handshakeCompleted event=" + event);
+                } catch (SSLPeerUnverifiedException e) {
+                    Log.d(ServiceSinkhole.TAG, "handshakeCompleted failed", e);
                 }
             });
             Log.d(ServiceSinkhole.TAG, "connectServer socket=" + socket);
