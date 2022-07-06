@@ -131,6 +131,7 @@ public class SSLProxy implements Runnable {
         SSLSocket socket = null;
         try {
             SSLContext context = SSLContext.getInstance("TLS");
+            @SuppressLint("CustomX509TrustManager")
             X509TrustManager trustManager = new X509TrustManager() {
                 @Override
                 public X509Certificate[] getAcceptedIssuers() {
@@ -282,21 +283,18 @@ public class SSLProxy implements Runnable {
             final CountDownLatch countDownLatch = new CountDownLatch(2);
             new StreamForward(localIn, socketOut, true, client.getHostString(), server.getHostString(), client.getPort(), server.getPort(), countDownLatch, local);
             new StreamForward(socketIn, localOut, false, client.getHostString(), server.getHostString(), client.getPort(), server.getPort(), countDownLatch, socket);
-            runnable = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        countDownLatch.await();
+            runnable = () -> {
+                try {
+                    countDownLatch.await();
 
-                        IPacketCapture packetCapture = vpn.getPacketCapture();
-                        if (packetCapture != null) {
-                            packetCapture.onSSLProxyFinish(client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
-                        }
-                    } catch (InterruptedException | RemoteException ignored) {
-                    } finally {
-                        IOUtils.closeQuietly(socket);
-                        IOUtils.closeQuietly(local);
+                    IPacketCapture capture = vpn.getPacketCapture();
+                    if (capture != null) {
+                        capture.onSSLProxyFinish(client.getHostString(), server.getHostString(), client.getPort(), server.getPort());
                     }
+                } catch (InterruptedException | RemoteException ignored) {
+                } finally {
+                    IOUtils.closeQuietly(socket);
+                    IOUtils.closeQuietly(local);
                 }
             };
         } catch (Exception e) {

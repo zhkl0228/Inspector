@@ -40,7 +40,7 @@ public class Apk {
 
     @Override
     public String toString() {
-        return packageName + '_' + versionCode;
+        return packageName + '_' + versionCode + '_' + versionName;
     }
 
 }

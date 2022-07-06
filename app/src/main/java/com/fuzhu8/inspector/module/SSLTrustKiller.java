@@ -22,9 +22,10 @@ import javax.net.ssl.X509TrustManager;
  * @author zhkl0228
  *
  */
+@SuppressLint("CustomX509TrustManager")
 public class SSLTrustKiller extends AbstractAdvisor implements X509TrustManager {
 
-	SSLTrustKiller(ModuleContext context) {
+	public SSLTrustKiller(ModuleContext context) {
 		super(context);
 	}
 
@@ -32,7 +33,7 @@ public class SSLTrustKiller extends AbstractAdvisor implements X509TrustManager 
 	 * @see com.fuzhu8.inspector.advisor.AbstractAdvisor#executeHook()
 	 */
 	@Override
-	protected void executeHook() {
+	public void executeHook() {
 		try {
 			hook(javax.net.ssl.TrustManagerFactory.class, "getTrustManagers");
 		} catch (Throwable e) {

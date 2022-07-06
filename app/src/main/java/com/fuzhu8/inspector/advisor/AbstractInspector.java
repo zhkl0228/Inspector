@@ -45,9 +45,6 @@ import com.alibaba.dcm.DnsCacheEntry;
 import com.alibaba.dcm.DnsCacheManipulator;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.facebook.stetho.Stetho;
-import com.facebook.stetho.dumpapp.DumperPlugin;
-import com.facebook.stetho.inspector.protocol.ChromeDevtoolsDomain;
 import com.freakishfox.xAnSo.xAnSoUnpacker;
 import com.fuzhu8.inspector.BuildConfig;
 import com.fuzhu8.inspector.ClientConnectListener;
@@ -86,13 +83,13 @@ import com.fuzhu8.inspector.jni.InspectorNative;
 import com.fuzhu8.inspector.jni.TraceAnti;
 import com.fuzhu8.inspector.kraken.KrakenCapture;
 import com.fuzhu8.inspector.maps.NativeLibraryMapInfo;
+import com.fuzhu8.inspector.module.SSLTrustKiller;
 import com.fuzhu8.inspector.plugin.LoadedModule;
 import com.fuzhu8.inspector.plugin.Plugin;
 import com.fuzhu8.inspector.root.LineListener;
 import com.fuzhu8.inspector.root.RootUtil;
 import com.fuzhu8.inspector.script.LuaScriptManager;
 import com.fuzhu8.inspector.script.MethodHashUtils;
-import com.fuzhu8.inspector.stetho.StethoInitializer;
 import com.fuzhu8.inspector.ui.StartVpnActivity;
 import com.fuzhu8.inspector.unicorn.Emulator;
 import com.fuzhu8.inspector.unicorn.EmulatorFactory;
@@ -274,7 +271,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		inspector.addCommandHelp("inspector:frida()", "inspector:frida(); -- Load frida gadget");
 		inspector.addCommandHelp("inspector:enableRegisterScript()", "inspector:enableRegisterScript(); -- Enable register boot script");
 		inspector.addCommandHelp("inspector:deregisterScript()", "inspector:deregisterScript(); -- Deregister boot script");
-		// inspector.addCommandHelp("inspector:stopPcap()", "inspector:stopPcap(); -- Request stop pcap");
+		inspector.addCommandHelp("inspector:killSSL()", "inspector:killSSL(); -- Start SSLTrustKiller");
 	}
 
 	private static File getBootRegisterScriptFile(Context context) {
@@ -657,8 +654,14 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 	@Override
 	public String getLastConnectedHost() {
-		return lastConnectedHost;
+		if (lastConnectedHost != null) {
+			return lastConnectedHost;
+		}
+		InetSocketAddress address = lastConnectedSocket == null ? null : (InetSocketAddress) lastConnectedSocket.getRemoteSocketAddress();
+		return address == null ? null : address.getHostString();
 	}
+
+	private Socket lastConnectedSocket;
 
 	/* (non-Javadoc)
 	 * @see java.lang.Runnable#run()
@@ -682,6 +685,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 
 				console.open(socket, socket.getInputStream(), socket.getOutputStream());
 				onConnected(console);
+				lastConnectedSocket = socket;
 
 				println("Connect to console[" + console.getClass().getSimpleName() + "] successfully! ");
 
@@ -1458,7 +1462,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		return ret;
 	}
 
-	@SuppressLint("HardwareIds")
+	@SuppressLint({"HardwareIds", "MissingPermission"})
 	private void imei() {
 		Context appContext = getAppContext();
 		if (appContext != null && appContext.checkCallingOrSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
@@ -1497,7 +1501,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 	}
 
-	@SuppressLint("HardwareIds")
+	@SuppressLint({"HardwareIds", "MissingPermission"})
 	private void number() {
 		Context appContext = getAppContext();
 		if (appContext != null && appContext.checkCallingOrSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
@@ -1523,7 +1527,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		println("deviceSoftwareVersion: " + tm.getDeviceSoftwareVersion());
 	}
 
-	@SuppressLint("HardwareIds")
+	@SuppressLint({"HardwareIds", "MissingPermission"})
 	@SuppressWarnings("deprecated")
 	public void info() throws NameNotFoundException, NoSuchFieldException, IllegalAccessException {
 		Context context = getAppContext();
@@ -2145,6 +2149,11 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 				println(out);
 			}
 		}
+	}
+
+	public void killSSL() {
+		SSLTrustKiller killer = new SSLTrustKiller(context);
+		out_println("killSSL: " + killer);
 	}
 
 	private void fakeSSL() {
