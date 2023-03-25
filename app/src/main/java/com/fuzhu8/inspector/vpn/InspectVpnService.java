@@ -23,6 +23,9 @@ public class InspectVpnService extends VpnService {
     public static final String SOCKS_HOST_KEY = "socksHost";
     public static final String SOCKS_PORT_KEY = "socksPort";
 
+    public static final String TEST_VPN_HOST_KEY = "testVpnHost";
+    public static final String TEST_VPN_PORT_KEY = "testVPnPort";
+
     private VpnWorker worker;
 
     @Override

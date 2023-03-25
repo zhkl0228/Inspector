@@ -328,16 +328,28 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 	}
 
 	@SuppressWarnings("unused")
-	private void startVpn() {
-		startVpn(null);
+	private void startVpn(boolean tryServer) {
+		startVpn(null, tryServer);
 	}
 
-	private void startVpn(String packageName) {
+	@SuppressWarnings("unused")
+	private void startVpn() {
+		startVpn(null, false);
+	}
+
+	private void startVpn(String packageName, boolean tryServer) {
 		Context context = getAppContext();
 		if (context == null) {
 			err_println("start vpn failed: context is null");
 			return;
 		}
+
+		String vpnHost = null;
+		int vpnPort = 20230;
+		if (tryServer) {
+			vpnHost = getLastConnectedHost();
+		}
+		Log.d("Inspector", "vpnHost=" + vpnHost + ", vpnPort=" + vpnPort + ", packageName=" + packageName);
 
 		Intent intent = new Intent();
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -363,6 +375,10 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 		}
 
 		Bundle bundle = new Bundle();
+		if (vpnHost != null) {
+			intent.putExtra(InspectVpnService.TEST_VPN_HOST_KEY, vpnHost);
+			intent.putExtra(InspectVpnService.TEST_VPN_PORT_KEY, vpnPort);
+		}
 		bundle.putString(InspectVpnService.PACKAGE_NAME_KEY, context.getPackageName());
 		bundle.putInt(InspectVpnService.UID_KEY, context.getApplicationInfo().uid);
 		bundle.putBinder(InspectVpnService.INSPECTOR_KEY, packetCapture);

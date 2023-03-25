@@ -35,6 +35,10 @@ public class StartVpnActivity extends Activity {
                 bundle.putString(InspectVpnService.SOCKS_HOST_KEY, socksHost);
                 bundle.putInt(InspectVpnService.SOCKS_PORT_KEY, socksPort);
             }
+            if (vpnHost != null && vpnPort > 0) {
+                bundle.putString(InspectVpnService.TEST_VPN_HOST_KEY, vpnHost);
+                bundle.putInt(InspectVpnService.TEST_VPN_PORT_KEY, vpnPort);
+            }
             bundle.putInt(InspectVpnService.EXTRA_UID_KEY, extraUid);
             IBinder binder = extraBundle == null ? null : extraBundle.getBinder(InspectVpnService.INSPECTOR_KEY);
             if (binder != null) {
@@ -53,6 +57,9 @@ public class StartVpnActivity extends Activity {
     private int extraUid;
     private Bundle extraBundle;
 
+    private String vpnHost;
+    private int vpnPort;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,6 +70,9 @@ public class StartVpnActivity extends Activity {
         socksPort = intent.getIntExtra(InspectVpnService.SOCKS_PORT_KEY, 0);
         extraUid = intent.getIntExtra(InspectVpnService.EXTRA_UID_KEY, 0);
         extraBundle = intent.getBundleExtra(Bundle.class.getCanonicalName());
+
+        vpnHost = intent.getStringExtra(InspectVpnService.TEST_VPN_HOST_KEY);
+        vpnPort = intent.getIntExtra(InspectVpnService.TEST_VPN_PORT_KEY, 0);
 
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null) {

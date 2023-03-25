@@ -31,13 +31,22 @@ import com.fuzhu8.inspector.vpn.InspectVpnService;
 import com.fuzhu8.inspector.vpn.InspectorVpn;
 import com.fuzhu8.tcpcap.PcapDLT;
 
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
@@ -469,10 +478,103 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         Log.i(TAG, "MTU=" + mtu);
         builder.setMtu(mtu);
 
+        if (useVpnServer()) {
+            builder.setBlocking(true);
+        }
+
         return builder;
     }
 
+    private boolean useVpnServer() {
+        return vpnHost != null && vpnPort > 0;
+    }
+
+    private class StreamForward implements Runnable {
+        private final DataInput inputStream;
+        private final OutputStream outputStream;
+        private final int mtu;
+        public StreamForward(DataInput inputStream, OutputStream outputStream, int mtu) {
+            this.inputStream = inputStream;
+            this.outputStream = outputStream;
+            this.mtu = mtu;
+        }
+        @Override
+        public void run() {
+            try {
+                byte[] packet = new byte[mtu];
+                while (vpnServerThread != null) {
+                    int length = inputStream.readUnsignedShort();
+                    if (length > mtu) {
+                        throw new IOException("length=" + length + ", mtu=" + mtu);
+                    }
+                    inputStream.readFully(packet, 0, length);
+                    if (length == -1) {
+                        throw new EOFException();
+                    }
+                    if (length > 0) {
+                        outputStream.write(packet, 0, length);
+                        outputStream.flush();
+                    }
+                }
+            } catch (IOException e) {
+                Log.w(TAG, "stream forward", e);
+            }
+        }
+    }
+
+    private Thread vpnServerThread;
+
     private void startNative(final ParcelFileDescriptor vpn) {
+        Log.d(TAG, "startNative vpnHost=" + vpnHost + ", vpnPort=" + vpnPort);
+        if (useVpnServer()) {
+            vpnServerThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try (Socket socket = new Socket()) {
+                        socket.setSoTimeout(60000);
+                        socket.connect(new InetSocketAddress(vpnHost, vpnPort), 15000);
+                        Log.d(TAG, "Connected to vpn server: " + socket);
+
+                        InputStream inputStream = socket.getInputStream();
+                        OutputStream outputStream = socket.getOutputStream();
+                        int mtu = jni_get_mtu();
+                        try (InputStream vpnInput = new FileInputStream(vpn.getFileDescriptor());
+                             OutputStream vpnOutput = new FileOutputStream(vpn.getFileDescriptor())) {
+                            DataOutput output = new DataOutputStream(outputStream);
+                            Thread thread = new Thread(new StreamForward(new DataInputStream(inputStream), vpnOutput, mtu));
+                            thread.start();
+                            byte[] packet = new byte[mtu];
+                            while (true) {
+                                int length = vpnInput.read(packet);
+                                if (length == -1) {
+                                    throw new EOFException();
+                                }
+                                if (length > 0) {
+                                    if (length > mtu) {
+                                        throw new IOException("Invalid mtu=" + mtu + ", length=" + length);
+                                    }
+                                    output.writeShort(length);
+                                    output.write(packet, 0, length);
+                                    outputStream.flush();
+                                }
+                            }
+                        }
+                    } catch (IOException e) {
+                        Log.w(TAG, "connect vpn server failed", e);
+                    }
+
+                    try {
+                        vpn.close();
+                    } catch (IOException ignored) {
+                    }
+                    vpnServerThread = null;
+                }
+            }, "Connect vpn server");
+            vpnServerThread.setPriority(Thread.MAX_PRIORITY);
+            vpnServerThread.start();
+            return;
+        }
+
         if (tunnelThread == null) {
             @SuppressLint("WorldReadableFiles")
             SharedPreferences pref = this.getSharedPreferences(BuildConfig.APPLICATION_ID + "_preferences", Context.MODE_PRIVATE);
@@ -503,6 +605,13 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
     private void stopNative(boolean clear) {
         Log.i(TAG, "Stop native clear=" + clear);
 
+        if (vpnServerThread != null) {
+            Thread thread = vpnServerThread;
+            thread.interrupt();
+            vpnServerThread = null;
+            Log.i(TAG, "Stopped vpn server thread");
+            return;
+        }
         if (tunnelThread != null) {
             Log.i(TAG, "Stopping tunnel thread: context=0x" + Long.toHexString(jni_context) + ", obj=" + this);
 
@@ -529,7 +638,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         try {
             pfd.close();
         } catch (IOException ex) {
-            Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+            Log.e(TAG, ex + "\n" + Log.getStackTraceString(ex));
         }
     }
 
@@ -607,6 +716,9 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
 
     private int extraUid;
 
+    private String vpnHost;
+    private int vpnPort;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "Received " + intent);
@@ -629,13 +741,16 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         socksServer = bundle == null ? null : bundle.getString(InspectVpnService.SOCKS_HOST_KEY);
         socksPort = bundle == null ? 0 : bundle.getInt(InspectVpnService.SOCKS_PORT_KEY);
         extraUid = bundle == null ? 0 : bundle.getInt(InspectVpnService.EXTRA_UID_KEY);
+        vpnHost = bundle == null ? null : bundle.getString(InspectVpnService.TEST_VPN_HOST_KEY);
+        vpnPort = bundle == null ? 0 : bundle.getInt(InspectVpnService.TEST_VPN_PORT_KEY);
 
         Command cmd = (Command) intent.getSerializableExtra(EXTRA_COMMAND);
         if (cmd == null) {
             intent.putExtra(EXTRA_COMMAND, Command.start);
         }
         String reason = intent.getStringExtra(EXTRA_REASON);
-        Log.i(TAG, "Start intent=" + intent + " command=" + cmd + " reason=" + reason + " vpn=" + (vpn != null) + " user=" + (Process.myUid() / 100000) + ", packetCapture=" + packetCapture + ", uid=" + uid + ", pid=" + pid + ", extraUid=" + extraUid);
+        Log.i(TAG, "Start intent=" + intent + " command=" + cmd + " reason=" + reason + " vpn=" + (vpn != null) + " user=" + (Process.myUid() / 100000) + ", packetCapture=" + packetCapture + ", uid=" + uid + ", pid=" + pid + ", extraUid=" + extraUid +
+                ", vpnHost=" + vpnHost + ", vpnPort=" + vpnPort);
 
         commandHandler.queue(intent);
         return START_STICKY;
