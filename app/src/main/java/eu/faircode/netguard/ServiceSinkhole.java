@@ -549,6 +549,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                                 if (length == -1) {
                                     throw new EOFException();
                                 }
+                                Log.d(TAG, "vpnInput length=" + length + ", mtu=" + mtu);
                                 if (length > 0) {
                                     if (length > mtu) {
                                         throw new IOException("Invalid mtu=" + mtu + ", length=" + length);
@@ -563,8 +564,12 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                         Log.w(TAG, "connect vpn server failed", e);
                     }
 
+                    ParcelFileDescriptor vpn = ServiceSinkhole.this.vpn;
                     try {
-                        vpn.close();
+                        if (vpn != null) {
+                            vpn.close();
+                        }
+                        ServiceSinkhole.this.vpn = null;
                     } catch (IOException ignored) {
                     }
                     vpnServerThread = null;
