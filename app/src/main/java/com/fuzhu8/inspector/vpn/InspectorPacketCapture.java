@@ -22,10 +22,10 @@ import org.krakenapps.pcap.util.ChainBuffer;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -216,7 +216,7 @@ public class InspectorPacketCapture extends IPacketCapture.Stub implements FileF
 
         InputStream inputStream = null;
         try {
-            inputStream = new FileInputStream(pcapFile);
+            inputStream = Files.newInputStream(pcapFile.toPath());
             inspector.writeToConsole(new InputStreamCache(processName + ".pcap", inputStream, (int) pcapFile.length()));
         } finally {
             IOUtils.closeQuietly(inputStream);

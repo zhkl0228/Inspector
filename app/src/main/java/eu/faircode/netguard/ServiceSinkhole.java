@@ -62,6 +62,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
+import cn.banny.utils.IOUtils;
 import cn.banny.utils.StringUtils;
 
 /**
@@ -386,7 +387,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                         }
             }
         } catch (SocketException ex) {
-            Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+            Log.e(TAG, ex + "\n" + Log.getStackTraceString(ex));
         }
 
         // https://en.wikipedia.org/wiki/Mobile_country_code
@@ -456,7 +457,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                     try {
                         builder.addRoute(include.address, include.prefix);
                     } catch (Throwable ex) {
-                        Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+                        Log.e(TAG, ex + "\n" + Log.getStackTraceString(ex));
                     }
                 }
                 start = IPUtil.plus1(exclude.getEnd());
@@ -465,10 +466,10 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                 try {
                     builder.addRoute(include.address, include.prefix);
                 } catch (Throwable ex) {
-                    Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+                    Log.e(TAG, ex + "\n" + Log.getStackTraceString(ex));
                 }
         } catch (UnknownHostException ex) {
-            Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+            Log.e(TAG, ex + "\n" + Log.getStackTraceString(ex));
         }
 
         builder.addRoute("0:0:0:0:0:0:0:0", 0);
@@ -493,10 +494,12 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
         private final DataInput inputStream;
         private final OutputStream outputStream;
         private final int mtu;
-        public StreamForward(DataInput inputStream, OutputStream outputStream, int mtu) {
+        private final ParcelFileDescriptor vpn;
+        public StreamForward(DataInput inputStream, OutputStream outputStream, int mtu, ParcelFileDescriptor vpn) {
             this.inputStream = inputStream;
             this.outputStream = outputStream;
             this.mtu = mtu;
+            this.vpn = vpn;
         }
         @Override
         public void run() {
@@ -519,6 +522,8 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
             } catch (IOException e) {
                 Log.w(TAG, "stream forward", e);
             }
+
+            IOUtils.close(vpn);
         }
     }
 
@@ -531,7 +536,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                 @Override
                 public void run() {
                     try (Socket socket = new Socket()) {
-                        socket.setSoTimeout(60000);
+                        protect(socket);
                         socket.connect(new InetSocketAddress(vpnHost, vpnPort), 15000);
                         Log.d(TAG, "Connected to vpn server: " + socket);
 
@@ -541,7 +546,7 @@ public class ServiceSinkhole extends VpnService implements InspectorBroadcastLis
                         try (InputStream vpnInput = new FileInputStream(vpn.getFileDescriptor());
                              OutputStream vpnOutput = new FileOutputStream(vpn.getFileDescriptor())) {
                             DataOutput output = new DataOutputStream(outputStream);
-                            Thread thread = new Thread(new StreamForward(new DataInputStream(inputStream), vpnOutput, mtu));
+                            Thread thread = new Thread(new StreamForward(new DataInputStream(inputStream), vpnOutput, mtu, vpn));
                             thread.start();
                             byte[] packet = new byte[mtu];
                             while (true) {

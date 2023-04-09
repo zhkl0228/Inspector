@@ -7,7 +7,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.http.NameValuePair;
 
 /**
  * @author zhkl0228

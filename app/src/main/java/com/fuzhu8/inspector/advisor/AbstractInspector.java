@@ -328,27 +328,28 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 	}
 
 	@SuppressWarnings("unused")
+	private void startVpn(String vpnHost) {
+		startVpn(null, vpnHost);
+	}
+
+	@SuppressWarnings("unused")
 	private void startVpn(boolean tryServer) {
-		startVpn(null, tryServer);
+		startVpn(null, tryServer ? getLastConnectedHost() : null);
 	}
 
 	@SuppressWarnings("unused")
 	private void startVpn() {
-		startVpn(null, false);
+		startVpn(null, null);
 	}
 
-	private void startVpn(String packageName, boolean tryServer) {
+	private void startVpn(String packageName, String vpnHost) {
 		Context context = getAppContext();
 		if (context == null) {
 			err_println("start vpn failed: context is null");
 			return;
 		}
 
-		String vpnHost = null;
 		int vpnPort = 20230;
-		if (tryServer) {
-			vpnHost = getLastConnectedHost();
-		}
 		Log.d("Inspector", "vpnHost=" + vpnHost + ", vpnPort=" + vpnPort + ", packageName=" + packageName);
 
 		Intent intent = new Intent();
