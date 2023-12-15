@@ -18,7 +18,7 @@ android {
 }
 
 dependencies {
-    api('com.github.zhkl0228:tcpcap:1.1.3') {
+    api('com.github.zhkl0228:tcpcap:1.1.4') {
         exclude group: '*'
     }
 

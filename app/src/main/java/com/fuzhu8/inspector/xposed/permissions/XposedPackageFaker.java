@@ -46,6 +46,8 @@ public class XposedPackageFaker implements FakeParsePackageResult {
 			permissionFaker = new PermissionFaker23(context, pref, permissionsAdd);
 		} else if(Build.VERSION.SDK_INT <= 31) {
 			permissionFaker = new PermissionFaker31(context, pref, permissionsAdd);
+		} else if(Build.VERSION.SDK_INT <= 33) {
+			permissionFaker = new PermissionFaker33(context, pref, permissionsAdd);
 		} else {
 			permissionFaker = null;
 		}
