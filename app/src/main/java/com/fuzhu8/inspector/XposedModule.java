@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Process;
 
 import com.fuzhu8.inspector.module.AbstractModuleStarter;
 import com.fuzhu8.inspector.module.ModuleStarter;
@@ -80,42 +81,6 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 			} else {
 				XposedBridge.log("initZygote XposedPackagePermissions failed for sdk: " + Build.VERSION.SDK_INT);
 			}
-
-			/*if (Build.VERSION.SDK_INT == 19) {
-				*//*Class<?> SELinux = Class.forName("android.os.SELinux");
-				XposedHelpers.callStaticMethod(SELinux, "setSELinuxEnforce", false);*//*
-
-				Class<?> Zygote = Class.forName("dalvik.system.Zygote");
-				// int forkAndSpecialize(int uid, int gid, int[] gids, int debugFlags, int[][] rlimits, int mountExternal, String seInfo, String niceName, int[] unknown)
-				XposedHelpers.findAndHookMethod(Zygote, "forkAndSpecialize", int.class, int.class, int[].class, int.class, int[][].class, int.class, String.class, String.class, int[].class, new XC_MethodHook() {
-					@Override
-					protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-						super.beforeHookedMethod(param);
-
-						Integer uid = (Integer) param.args[0];
-						Integer gid = (Integer) param.args[1];
-						int[] gids = (int[]) param.args[2];
-						Integer debugFlags = (Integer) param.args[3];
-						Integer mountExternal = (Integer) param.args[5];
-						String seInfo = (String) param.args[6];
-						String niceName = (String) param.args[7];
-						XposedBridge.log("forkAndSpecialize uid=" + uid + ", gid=" + gid + ", gids=" + Arrays.toString(gids) + ", debugFlags=" + debugFlags + ", mountExternal=" + mountExternal + ", seInfo=" + seInfo + ", niceName=" + niceName + ", myUid=" + Process.myUid() + ", myPid=" + Process.myPid());
-					}
-				});
-				// int forkSystemServer(int uid, int gid, int[] gids, int debugFlags, int[][] rlimits, long permittedCapabilities, long effectiveCapabilities)
-				XposedHelpers.findAndHookMethod(Zygote, "forkSystemServer", int.class, int.class, int[].class, int.class, int[][].class, long.class, long.class, new XC_MethodHook() {
-					@Override
-					protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-						super.afterHookedMethod(param);
-
-						Integer uid = (Integer) param.args[0];
-						Integer gid = (Integer) param.args[1];
-						int[] gids = (int[]) param.args[2];
-						Integer debugFlags = (Integer) param.args[3];
-						XposedBridge.log("forkSystemServer uid=" + uid + ", gid=" + gid + ", gids=" + Arrays.toString(gids) + ", debugFlags=" + debugFlags + ", myUid=" + Process.myUid() + ", myPid=" + Process.myPid() + ", ret=" + param.getResult());
-					}
-				});
-			}*/
 		} catch(Throwable t) {
 			XposedBridge.log(t);
 		}
@@ -172,11 +137,7 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 		XSharedPreferences pref = new XSharedPreferences(BuildConfig.APPLICATION_ID);
 		pref.reload();
 
-		/*if(isEnabled(pref) && KrakenCapture.PACKAGE_NAME.equals(lpparam.packageName) && Build.VERSION.SDK_INT == 19) {
-			hookSystemServer();
-		}*/
-
-		if (isEnabled(pref) && canInspect(lpparam, pref)) {
+		if (isEnabled(pref) && canInspect(lpparam)) {
 			File moduleDataDir = getModuleDataDir(lpparam.appInfo.dataDir, BuildConfig.APPLICATION_ID);
 			ModuleStarter moduleStarter = new XposedModuleStarter(modulePath, pref.getBoolean("pref_debug", false),
 					pref.getBoolean("pref_trace_anti", true),
@@ -184,52 +145,27 @@ public class XposedModule extends Module implements IXposedHookZygoteInit, IXpos
 					pref.getBoolean("pref_trace_file", false),
 					pref.getBoolean("pref_trace_sys_call", false),
 					pref.getBoolean("pref_trace_trace", false),
-					pref.getBoolean("pref_broadcast", false));
+					pref.getBoolean("pref_broadcast", true));
 			moduleStarter.startModule(lpparam.appInfo, lpparam.processName, moduleDataDir, pref.getString("pref_collect_bytecode_text", null), lpparam.classLoader);
 		}
 	}
 
-	private boolean canInspect(LoadPackageParam lpparam, XSharedPreferences pref) {
-		// XposedBridge.log("canInspect packageName=" + lpparam.packageName + ", processName=" + lpparam.processName + ", appInfo=" + lpparam.appInfo + ", systemApp=" + pref.getBoolean("pref_system_app", false));
+	private boolean canInspect(LoadPackageParam lpparam) {
+		XposedBridge.log("testCanInspect packageName=" + lpparam.packageName + ", processName=" + lpparam.processName + ", pid=" + Process.myPid() + ", uid=" + Process.myUid() + ", appInfo=" + lpparam.appInfo);
 
-		if(lpparam.appInfo == null) {
+		if(lpparam.appInfo == null || lpparam.processName == null) {
 			return false;
 		}
 
-		if((lpparam.appInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0 || !lpparam.isFirstApplication) {//系统应用
-			return pref.getBoolean("pref_system_app", false);
+		if((lpparam.appInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0) {//系统应用
+			return true;
 		}
 
-		boolean canHookAppService = pref.getBoolean("pref_app_service", true);
-		if (!canHookAppService && lpparam.processName.contains(":")) {
-			return false;
+		if (lpparam.processName.contains(":")) {
+			return true;
 		}
 
 		return !BuildConfig.APPLICATION_ID.equals(lpparam.packageName); // 禁止hook自身
 	}
-
-	/*private void hookSystemServer() {
-		XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
-			@Override
-			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-				super.afterHookedMethod(param);
-
-				setApplication(Application.class.cast(param.thisObject));
-			}
-		});
-	}
-
-	private KrakenCapture systemServer;
-
-	private void setApplication(Application application) {
-		if(systemServer != null || application == null) {
-			return;
-		}
-
-		systemServer = new KrakenCapture(application);
-		Thread thread = new Thread(systemServer, systemServer.getClass().getSimpleName());
-		thread.setDaemon(true);
-		thread.start();
-	}*/
 
 }

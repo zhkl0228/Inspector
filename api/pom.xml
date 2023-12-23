@@ -88,12 +88,12 @@
 		<repository>
 			<id>releases</id>
 			<name>Releases Repository</name>
-			<url>http://192.168.31.88:8081/nexus/content/repositories/releases/</url>
+			<url>http://hy1801.v6.rocks:8081/nexus/content/repositories/releases/</url>
 		</repository>
 		<snapshotRepository>
 			<id>snapshots</id>
 			<name>Snapshots Repository</name>
-			<url>http://192.168.31.88:8081/nexus/content/repositories/snapshots/</url>
+			<url>http://hy1801.v6.rocks:8081/nexus/content/repositories/snapshots/</url>
 		</snapshotRepository>
 	</distributionManagement>
 </project>

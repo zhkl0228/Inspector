@@ -5,29 +5,23 @@ import android.util.Log;
 
 import com.fuzhu8.inspector.DigestUtils;
 import com.fuzhu8.inspector.Inspector;
+import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.Module;
 import com.fuzhu8.inspector.ModuleContext;
-import com.fuzhu8.inspector.InspectorModuleContext;
 import com.fuzhu8.inspector.advisor.AbstractAdvisor;
 import com.fuzhu8.inspector.advisor.MethodHook;
-import com.fuzhu8.inspector.dex.provider.BootClassPathElement;
 import com.fuzhu8.inspector.dex.provider.DexFileProvider;
 import com.fuzhu8.inspector.dex.provider.DexPathListElement;
 import com.fuzhu8.inspector.dex.provider.StaticDexFileElement;
-import com.fuzhu8.inspector.dex.vm.dvm.ClassObject;
-import com.fuzhu8.inspector.dex.vm.dvm.ClassPathEntry;
 import com.fuzhu8.inspector.dex.vm.dvm.DexProtoId;
 import com.fuzhu8.inspector.dex.vm.dvm.DexTypeList;
-import com.fuzhu8.inspector.dex.vm.dvm.DvmDex;
 import com.fuzhu8.inspector.jni.DexHunter;
-import com.fuzhu8.inspector.jni.DvmUtil;
 import com.fuzhu8.inspector.jni.TraceAnti;
 import com.fuzhu8.inspector.plugin.Plugin;
 import com.sun.jna.Pointer;
 import com.taobao.android.dexposed.XposedHelpers;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +37,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -63,8 +56,6 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 
 	private final Set<DexFileProvider> dynamicLoadedDexInfo = new LinkedHashSet<>();
 	private final Set<DexFileProvider> staticLoadedDex = new LinkedHashSet<>();
-	
-	private final DvmUtil dvmUtil = DvmUtil.getInstance();
 
 	public AbstractDexFileManager(ModuleContext context) {
 		super(context);
@@ -115,19 +106,9 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 	 */
 	@Override
 	public Collection<DexFileProvider> dumpDexFiles(boolean includeBootClassPath) {
-		Set<DexFileProvider> set = new LinkedHashSet<DexFileProvider>();
-		if(includeBootClassPath && Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) {
-			try {
-				for(ClassPathEntry cpe : dvmUtil.getDvmGlobals().getBootClassPath()) {
-					BootClassPathElement dex = new BootClassPathElement(ClassLoader.getSystemClassLoader(), cpe.getFileName(), cpe.getDvmDex());
-					set.add(dex);
-				}
-			} catch(Throwable t) {
-				log(t);
-			}
-		}
+		Set<DexFileProvider> set;
 		synchronized (this.staticLoadedDex) {
-			set.addAll(this.staticLoadedDex);
+			set = new LinkedHashSet<>(this.staticLoadedDex);
 		}
 		try {
 			readDexs(set, context.getClassLoader());
@@ -350,37 +331,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 
 	@Override
 	public DexFileData getDexFileByteClass(Class<?> clazz, boolean dexHunter, boolean deodex) {
-		ClassObject dexClassObject = dvmUtil.getDexClassObject(clazz);
-		if(dexClassObject == null) {
-			return null;
-		}
-		
-		DvmDex dex = dexClassObject.getDvmDex();
-		if(dex == null) {
-			return null;
-		}
-		
-		com.fuzhu8.inspector.dex.vm.dvm.DvmDexFile dexFile = dex.getDexFile();
-		if(dexFile == null) {
-			return null;
-		}
-		
-		ByteBuffer buffer = dexFile.getDex();
-		if(buffer == null) {
-			return null;
-		}
-		
-		if(!deodex) {
-			return new DexFileData(buffer, clazz.getSimpleName(), null);
-		}
-
-		String fileName = dvmUtil.findBootClassDvmDexName(dex);
-		if(fileName == null) {
-			fileName = clazz.getSimpleName();
-		} else {
-			fileName = FilenameUtils.getFullPath(fileName) + FilenameUtils.getBaseName(fileName);
-		}
-		return DexFileData.createFile(buffer, fileName, "", inspector, dexHunter ? null : dexFile);
+		throw new UnsupportedOperationException();
 	}
 	
 	private final Map<String, BytecodeMethod> instructionMap = new HashMap<String, BytecodeMethod>();
@@ -806,11 +757,7 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 
 	@Override
 	public ClassMethod readMethodBytecode(Member method, int methodId) {
-		if (!(method instanceof Method) && !(method instanceof Constructor<?>)) {
-			return null;
-		}
-		
-		return readMethodBytecode(methodId < 1 ? dvmUtil.findMethodId(method) : methodId);
+		throw new UnsupportedOperationException();
 	}
 
 	/**
@@ -826,58 +773,12 @@ public abstract class AbstractDexFileManager extends AbstractAdvisor implements
 
 	@Override
 	public BytecodeMethod readClassInitBytecode(Class<?> clazz) {
-		ClassObject dexClassObject = dvmUtil.getDexClassObject(clazz);
-		if(dexClassObject == null) {
-			return null;
-		}
-		
-		for(com.fuzhu8.inspector.dex.vm.dvm.Method method : dexClassObject.getDirectMethods()) {
-			if("<clinit>".equals(method.getName())) {
-				return (BytecodeMethod) method.getInsns();
-			}
-		}
-		for(com.fuzhu8.inspector.dex.vm.dvm.Method method : dexClassObject.getVirtualMethods()) {
-			if("<clinit>".equals(method.getName())) {
-				return (BytecodeMethod) method.getInsns();
-			}
-		}
-		
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public Map<String, ClassMethod> readClassMethodBytecode(Class<?> clazz) {
-		ClassObject dexClassObject = dvmUtil.getDexClassObject(clazz);
-		if(dexClassObject == null) {
-			return Collections.emptyMap();
-		}
-		
-		Map<String, ClassMethod> insMap = new LinkedHashMap<String, ClassMethod>();
-		DvmDex dvmDex = dexClassObject.getDvmDex();
-		
-		String fileName = dvmUtil.findBootClassDvmDexName(dvmDex);
-		
-		if(inspector.isDebug()) {
-			inspector.println("readClassMethodBytecode clazz=" + clazz +
-					", name=" + fileName);
-		}
-		
-		if(fileName != null) {
-			inspector.println("readClassMethodBytecode from " + fileName);
-		}
-		
-		if(dvmDex == null) {
-			return insMap;
-		}
-		com.fuzhu8.inspector.dex.vm.DexFile dexFile = dvmDex.getDexFile();
-		String classBinaryName = dexClassObject.getDescriptor();
-		for(com.fuzhu8.inspector.dex.vm.dvm.Method method : dexClassObject.getDirectMethods()) {
-			addInsMap(dexFile, method, classBinaryName, insMap);
-		}
-		for(com.fuzhu8.inspector.dex.vm.dvm.Method method : dexClassObject.getVirtualMethods()) {
-			addInsMap(dexFile, method, classBinaryName, insMap);
-		}
-		return insMap;
+		throw new UnsupportedOperationException();
 	}
 	
 	private void addInsMap(com.fuzhu8.inspector.dex.vm.DexFile dexFile, com.fuzhu8.inspector.dex.vm.dvm.Method method, String classBinaryName, Map<String, ClassMethod> insMap) {

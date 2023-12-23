@@ -63,76 +63,76 @@ public abstract class AbstractModuleStarter implements ModuleStarter {
 		if (debug) {
 			log("Preparing inspect [" + processName + "][" + Process.myPid() + "][" + Build.CPU_ABI + "] with moduleDataDir: " + moduleDataDir);
 		}
-
-		final Hooker hooker = createHooker();
-		ClassLoader myLoader = AbstractModuleStarter.class.getClassLoader();
-		final ModuleContext context = new InspectorModuleContext(myLoader,
-				processName,
-				moduleDataDir,
-				appInfo.dataDir,
-				appInfo, modulePath, null, hooker, createSdk());
-		
-		createLoadLibraryFake(context);
-		
-		DexFileManager dexFileManager = createDexFileManager(context);
-		LuaScriptManager scriptManager = createLuaScriptManager(context);
-		
-		Inspector inspector = createInspector(context, dexFileManager, scriptManager);
-		if (!Platform.isAndroid()) {
-			throw new IllegalStateException();
-		}
-		Native.getLastError();//初始化JNA
-		Thread thread = new Thread(inspector, inspector.getClass().getSimpleName());
-		thread.start();
-
-		scriptManager.setInspector(inspector);
-		dexFileManager.setInspector(inspector);
-		dexFileManager.discoverClassLoader(classLoader);
 		
 		try {
-			scriptManager.registerAll(dexFileManager);
-		} catch(Throwable t) {
-			log(t);
-		}
+			final Hooker hooker = createHooker();
+			ClassLoader myLoader = AbstractModuleStarter.class.getClassLoader();
+			final ModuleContext context = new InspectorModuleContext(myLoader,
+					processName,
+					moduleDataDir,
+					appInfo.dataDir,
+					appInfo, modulePath, null, hooker, createSdk());
 
-		try {
-			context.discoverPlugins(dexFileManager, inspector, scriptManager, myLoader, hooker);
-		} catch(Throwable t) {
-			log(t);
-		}
+			createLoadLibraryFake(context);
 
-		if(debug) {
-			InspectorModuleContext.setDebug();
-		}
-		
-		if(Feature.supportDvm() && trace_anti) {
-			dexFileManager.traceAnti(appInfo.dataDir,
-					anti_thread_create,
-					trace_file,
-					trace_sys_call,
-					trace_trace,
-					0);
-		}
+			DexFileManager dexFileManager = createDexFileManager(context);
+			LuaScriptManager scriptManager = createLuaScriptManager(context);
 
-		if(Feature.supportDvm() && !StringUtils.isEmpty(collect_bytecode_text)) {
-			/*
-			 * 收集所有字节码
-			 */
-			inspector.enableCollectBytecode(collect_bytecode_text);
-			inspector.println("Enable collect bytecode successfully! ");
-		}
-		
-		Context initializeContext = getPluginInitializeContext();
-		if(initializeContext != null) {
-			for(Plugin plugin : context.getPlugins()) {
-				plugin.initialize(initializeContext);
+			Inspector inspector = createInspector(context, dexFileManager, scriptManager);
+			if (!Platform.isAndroid()) {
+				throw new IllegalStateException();
 			}
+			Native.getLastError();//初始化JNA
+			Thread thread = new Thread(inspector, inspector.getClass().getSimpleName());
+			thread.start();
+
+			scriptManager.setInspector(inspector);
+			dexFileManager.setInspector(inspector);
+			dexFileManager.discoverClassLoader(classLoader);
+
+			scriptManager.registerAll(dexFileManager);
+
+			try {
+				context.discoverPlugins(dexFileManager, inspector, scriptManager, myLoader, hooker);
+			} catch(Throwable t) {
+				log(t);
+			}
+
+			if(debug) {
+				InspectorModuleContext.setDebug();
+			}
+
+			if(Feature.supportDvm() && trace_anti) {
+				dexFileManager.traceAnti(appInfo.dataDir,
+						anti_thread_create,
+						trace_file,
+						trace_sys_call,
+						trace_trace,
+						0);
+			}
+
+			if(Feature.supportDvm() && !StringUtils.isEmpty(collect_bytecode_text)) {
+				/*
+				 * 收集所有字节码
+				 */
+				inspector.enableCollectBytecode(collect_bytecode_text);
+				inspector.println("Enable collect bytecode successfully! ");
+			}
+
+			Context initializeContext = getPluginInitializeContext();
+			if(initializeContext != null) {
+				for(Plugin plugin : context.getPlugins()) {
+					plugin.initialize(initializeContext);
+				}
+			}
+
+			// new SSLTrustKiller(context);
+			afterStartModule(context, inspector, dexFileManager, scriptManager);
+
+			inspector.println("Inspect process [" + processName + "][" + Process.myPid() + "] successfully! ");
+		} catch(Throwable t) {
+			log(t);
 		}
-
-		// new SSLTrustKiller(context);
-		afterStartModule(context, inspector, dexFileManager, scriptManager);
-
-		inspector.println("Inspect process [" + processName + "][" + Process.myPid() + "] successfully! ");
 	}
 
 	protected void afterStartModule(ModuleContext context, Inspector inspector, DexFileManager dexFileManager, LuaScriptManager luaScriptManager) {

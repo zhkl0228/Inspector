@@ -2432,8 +2432,7 @@ public abstract class AbstractInspector extends AbstractAdvisor implements
 			lastSendBroadcast = current;
 		} catch (SocketException e) {
 			// ignore
-		} catch (Exception e) {
-			super.log(e);
+		} catch (Exception ignored) {
 		} finally {
 			IOUtils.closeQuietly(dos);
 			IOUtils.closeQuietly(baos);
